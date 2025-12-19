@@ -138,9 +138,13 @@ body:has(.card.game-active) {
 
 /* 랭킹 버튼 (대기 중 표시) */
 .ranking-btn-area {
-  display: none; /* JS Toggle */
+  display: none; /* Default hidden */
+  gap: 10px;
+  margin-top: 20px;
 }
-.ranking-btn-area.active { display: block; }
+.ranking-btn-area.active {
+  display: flex !important; /* Show only when active */
+}
 
 .rank-open-btn {
   background: white;
@@ -546,6 +550,42 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
 }
 .toast-msg.show { opacity: 1; }
 
+/* 업적 달성 팝업 */
+.achievement-popup {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); z-index: 20000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.achievement-popup.show { opacity: 1; pointer-events: auto; }
+.achievement-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 3px solid #f59e0b; border-radius: 24px;
+  padding: 32px 48px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 40px rgba(245,158,11,0.4);
+  animation: achievePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 90vw;
+}
+@keyframes achievePop {
+  0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.achievement-icon { font-size: 64px; margin-bottom: 12px; }
+.achievement-title { font-size: 14px; color: #92400e; font-weight: 600; margin-bottom: 4px; }
+.achievement-name { font-size: 28px; font-weight: 900; color: #78350f; margin-bottom: 8px; }
+.achievement-desc { font-size: 14px; color: #a16207; }
+
+/* 아바타 선택 옵션 */
+.avatar-option {
+  font-size: 28px; cursor: pointer; padding: 6px;
+  border-radius: 8px; transition: 0.2s;
+}
+.avatar-option:hover { background: #e0f2fe; transform: scale(1.2); }
+.avatar-option.locked { 
+  opacity: 0.3; filter: grayscale(100%); cursor: not-allowed;
+}
+.avatar-option.locked:hover { background: none; transform: none; }
+
 /* 완료 모달 전용 스타일 */
 .finish-title { font-size: 28px; font-weight: 900; color: var(--primary-dark); margin-bottom: 12px; }
 .finish-message { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 24px; line-height: 1.5; }
@@ -608,6 +648,46 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
   </div>
 </div>
 
+<!-- 마이페이지 모달 (NEW) -->
+<div class="modalOverlay hidden" id="myPageModal">
+  <div class="modalCard" style="max-width: 600px; text-align:left;">
+    <button class="modalCloseBtn" onclick="document.getElementById('myPageModal').classList.add('hidden')">✕</button>
+    
+    <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:20px;">
+        <div id="profileAvatar" onclick="showAvatarPicker()" style="width:60px; height:60px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer; transition:0.2s; position:relative;" title="클릭하여 아바타 변경">🧑‍💻
+            <div style="position:absolute; bottom:-2px; right:-2px; background:#f1f5f9; font-size:10px; width:18px; height:18px; border-radius:4px; display:flex; align-items:center; justify-content:center;">✏️</div>
+        </div>
+        <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:20px; font-weight:800; color:#0f172a;" id="myNameDisplay">User</span>
+                <button onclick="enableNameEdit()" style="font-size:12px; padding:2px 6px; background:#f1f5f9; border:none; border-radius:4px; cursor:pointer;" title="이름 변경">✏️</button>
+            </div>
+            <div id="nameEditForm" class="hidden" style="margin-top:5px; gap:5px;">
+                <input type="text" id="newNameInput" style="padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:14px; width:100px;">
+                <button onclick="saveNewName()" style="padding:4px 8px; background:#3b82f6; color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">저장</button>
+            </div>
+            <div style="font-size:14px; color:#64748b;" id="myIdDisplay">ID: test</div>
+        </div>
+        <div style="margin-left:auto;">
+            <button onclick="logout()" style="padding:8px 16px; background:#ef4444; color:white; border:none; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">로그아웃</button>
+        </div>
+    </div>
+    
+    <!-- 아바타 선택 영역 (동적으로 채워짐) -->
+    <div id="avatarPicker" style="display:none; margin-bottom:15px; padding:12px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; max-height:180px; overflow-y:auto;">
+        <div style="font-size:12px; color:#64748b; margin-bottom:8px;">🎭 기본 아바타</div>
+        <div id="baseAvatars" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;"></div>
+        <div style="font-size:12px; color:#64748b; margin-bottom:8px;">🏆 업적 아바타 <span style="font-size:10px;">(업적 달성 시 해금)</span></div>
+        <div id="achievementAvatars" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+    </div>
+
+    <div style="font-size:16px; font-weight:800; margin-bottom:15px; ">🎖️ 획득한 업적</div>
+    <div id="myAchList" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; max-height:250px; overflow-y:auto;">
+        <!-- JS채움 -->
+    </div>
+  </div>
+</div>
+
 <!-- 완료 축하 모달 (NEW) -->
 <div class="modalOverlay hidden" id="finishModal">
   <div class="modalCard" style="max-width: 450px;">
@@ -625,7 +705,7 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
       </div>
     </div>
     
-    <button class="primary loginBtn" id="finishCloseBtn" style="font-size: 18px; padding: 16px;">메인으로</button>
+    <button class="primary loginBtn" id="finishCloseBtn" style="font-size: 18px; padding: 16px;">확인</button>
   </div>
 </div>
 
@@ -646,16 +726,20 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
 <div class="card">
   <!-- 헤더 -->
   <div class="header">
+
     <div class="headerTop">
       <div class="titleBox">
         <div class="title">정렬 색인 실험</div>
         <div class="sub">단어를 가나다순으로 빠르게 정렬하세요</div>
       </div>
       
-      <!-- [1] 랭킹 버튼 (대기 중 표시) -->
+      <!-- [1] 메인 버튼 영역 (대기 중 표시) -->
       <div class="ranking-btn-area active" id="rankingBtnArea">
-        <button id="showRankingBtn" class="rank-open-btn">
+        <button id="showRankingBtn" class="rank-open-btn" style="flex:1;">
            <span>🏆 랭킹 보기</span>
+        </button>
+        <button id="myPageBtnMain" class="rank-open-btn" style="flex:1;">
+           <span>⭐ 업적 보기</span>
         </button>
       </div>
 
@@ -712,7 +796,7 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
         1. <strong>[실험 시작]</strong> 버튼을 누르면 단어들이 무작위로 나타납니다.<br>
         2. 드래그 앤 드롭을 이용해 <strong>가나다순</strong>으로 정렬해주세요.<br>
         3. <strong>화면 위아래 끝으로 드래그하면 자동으로 스크롤됩니다.</strong><br>
-        4. 정렬이 완료되면 자동으로 종료되며 로그를 다운로드할 수 있습니다.
+        4. 정렬이 완료되면 자동으로 종료되며, <strong>Top 5 안에 들면 상품을 받으실 수 있습니다!</strong>
       </p>
       <p style="color:var(--muted); font-size:13px; margin-top:20px;">
         ※ 수집된 데이터는 연구 목적으로만 사용됩니다.
@@ -725,17 +809,26 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
   </div>
   
   <div class="footer">
-    © 32nd 이도혜, 32nd 엄지오
+    © 32nd 엄지오, 32nd 이도혜
   </div>
   
   <div class="toast-msg" id="toast"></div>
 </div>
 
-<!-- 초기화 버튼 (카드 외부 플로팅) -->
-<button class="secondary floating-reset-btn" id="resetBtn" disabled style="display:none;"><span>↺</span> 초기화</button>
+<!-- 업적 달성 팝업 -->
+<div class="achievement-popup" id="achievementPopup">
+  <div class="achievement-card">
+    <div class="achievement-icon" id="achPopupIcon">🏆</div>
+    <div class="achievement-title">🎉 업적 달성!</div>
+    <div class="achievement-name" id="achPopupName">업적 이름</div>
+    <div class="achievement-desc" id="achPopupDesc">업적 설명</div>
+  </div>
+</div>
 
-<!-- 로그 다운로드 버튼 (카드 외부 플로팅) -->
-<button class="primary floating-log-btn" id="logBtn" style="display:none; background:#2563eb;"><span>⬇</span> 로그 다운로드</button>
+<!-- 초기화 버튼 (카드 외부 플로팅) -->
+<button class="secondary floating-reset-btn" id="resetBtn" disabled style="display:none;"><span>↺</span> 메인으로</button>
+
+<!-- 로그 다운로드 버튼 제거됨 (관리자는 admin.php에서 다운로드 가능) -->
 
 <script src="./Sortable.js"></script>
 <script>
@@ -755,10 +848,14 @@ const timerEl = document.getElementById("timer");
 const statusEl = document.getElementById("status");
 const gaugeBarEl = document.getElementById("gaugeBar");
 const progressText = document.getElementById("progressText");
+// My Page Modal
+const myPageModal = document.getElementById('myPageModal');
+
+// (Legacy Header Button Removed)
 const startBtn = document.getElementById("startBtn");
 const resetBtn = document.getElementById("resetBtn");
 const sizeSel = document.getElementById("sizeSel");
-const logBtn = document.getElementById("logBtn");
+// logBtn removed - logs are for admin only
 const toast = document.getElementById("toast");
 const desktopHud = document.getElementById("desktopHud");
 const contentArea = document.querySelector(".contentArea");
@@ -779,6 +876,33 @@ const finishMessage = document.getElementById("finishMessage");
 const finishTimeVal = document.getElementById("finishTimeVal");
 const finishDifficultyVal = document.getElementById("finishDifficultyVal");
 const finishCloseBtn = document.getElementById("finishCloseBtn");
+const myPageBtnMain = document.getElementById("myPageBtnMain");
+
+if(myPageBtnMain){
+    myPageBtnMain.addEventListener('click', async () => {
+        if(!userInfo.id){ 
+            showToast("로그인이 필요합니다."); 
+            loginModal.classList.remove('hidden');
+            return; 
+        }
+
+        // Refresh Data
+        try {
+            const res = await fetch(`${API_BASE}/achievements.php`, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ id: userInfo.id, mode: 'VIEW_ONLY', time: 0, error_count: 0 })
+            });
+            const data = await res.json();
+            if(data.success){
+                userInfo.achievements = data.all_achievements;
+                updateMyPageUI(userInfo.achievements || [], data.global_stats || {});
+            }
+        } catch(e){ console.error(e); }
+        
+        myPageModal.classList.remove('hidden');
+    });
+}
 
 
 /* 상태값 */
@@ -802,6 +926,7 @@ let scrollLoopId = null;
 // 로깅용 상태
 let orderBeforeMove = "";
 let prevInversionCount = -1;
+let errorCount = 0; // 에러 이동 횟수 (inversion 증가 시)
 
 /* 로그인 */
 const loginModal = document.getElementById("loginModal");
@@ -869,9 +994,16 @@ async function handleAuth(){
     
     if(data.success){
       userInfo.id = id; 
-      userInfo.name = data.name || nm; // Use server returned name for consistency
+      userInfo.name = data.name || nm;
+      userInfo.avatar = data.avatar || '';
+      userInfo.achievements = data.achievements || [];
       loginModal.classList.add("hidden");
       showToast(authMode==="login" ? `환영합니다, ${userInfo.name}님!` : "가입 완료! 환영합니다.");
+      // Update avatar display if available
+      if(userInfo.avatar){
+        const avatarEl = document.getElementById('profileAvatar');
+        if(avatarEl) avatarEl.childNodes[0].textContent = userInfo.avatar;
+      }
     } else {
       loginMsg.textContent = data.message || "오류가 발생했습니다.";
       loginMsg.style.display="block";
@@ -1003,6 +1135,7 @@ async function openRankingModal(modeKey){
         // CONTENT
         rankList.innerHTML = renderList(isExpanded ? 100 : 5); // 5 or 100
 
+        // BUTTON (Only if > 5)
         // BUTTON (Only if > 5)
         if(ranks.length > 5){
             const btnDiv = document.createElement("div");
@@ -1209,7 +1342,7 @@ async function startRun(){
     shuffle(out); items = ensureNotAlreadySorted(out);
   }catch(e){ setStatus("오류"); showToast("생성 실패"); return; }
 
-  memoBox.style.display="none"; listWrap.style.display="block"; logBtn.style.display="none";
+  memoBox.style.display="none"; listWrap.style.display="block";
   resetBtn.disabled=false; resetBtn.style.display="block"; // 플로팅 리셋 버튼 표시
   sizeSel.disabled=true; startBtn.disabled=true;
 
@@ -1225,6 +1358,7 @@ async function startRun(){
   
   setStatus("진행 중"); 
   actionLog=[]; 
+  errorCount=0; // 에러 카운트 초기화
   logAction("INIT", 0, 0, 0, prevInversionCount, currentWids().join("|"));
   
   // UI 상태 전환: 랭킹 버튼 숨김 -> 게임 패널 표시
@@ -1269,6 +1403,7 @@ function initSortable(){
 function logAction(act, wid, from, to, currInv, extraInfo){
   const dist = (act === "MOVE") ? Math.abs(from - to) : 0;
   const isError = (act === "MOVE" && currInv > prevInversionCount) ? 1 : 0;
+  if(isError) errorCount++; // 에러 이동 카운트
   const scrollPos = (contentArea) ? Math.floor(contentArea.scrollTop) + (window.scrollY || 0) : 0;
   
   actionLog.push({
@@ -1295,7 +1430,7 @@ function checkFinish(keys, currInv){
   if(isSortedKeys(keys)){
     finished=true; clearInterval(timerId); setStatus("완료");
     sortableInst.option("disabled", true);
-    logBtn.style.display="flex"; gaugeBarEl.style.width="100%"; 
+    gaugeBarEl.style.width="100%"; 
     document.querySelectorAll(".progress-text-display").forEach(el=>el.textContent="100%");
     
     // 랭킹 저장
@@ -1304,9 +1439,11 @@ function checkFinish(keys, currInv){
     
     // Save Ranking (Async)
     saveRanking(sizeSel.value, userInfo.name, finalTime).then(() => {
-        // Refresh ranking check for modal if needed, but we check ranks via fetch inside openFinishModal logic mostly for rewards
-        // Note: The reward logic needs to fetch fresh ranks.
+        // Refresh ranking check for modal if needed
         checkTop5Reward(sizeSel.value, difficultyText, finalTime);
+        // Check Achievements
+        // Check Achievements (Pass value '10','20' etc for robust check)
+        checkAchievements(sizeSel.value, finalTime, errorCount);
     });
 
     // Auto-Upload Logs
@@ -1353,6 +1490,67 @@ async function uploadLogsToServer(){
   }).catch(e=>console.error("Log upload failed:",e));
 }
 
+async function checkAchievements(mode, time, errCount){
+    if(!userInfo.id) return;
+    try {
+        const res = await fetch(`${API_BASE}/achievements.php`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ 
+                id: userInfo.id, 
+                mode: mode, 
+                time: time, 
+                error_count: errCount
+            })
+        });
+        const data = await res.json();
+        if(data.success && data.new_achievements && data.new_achievements.length > 0){
+            // 업적 팝업 큐에 추가
+            showAchievementQueue(data.new_achievements);
+            userInfo.achievements = data.all_achievements;
+        }
+    } catch(e){ console.error("Achievement check failed", e); }
+}
+
+// 업적 팝업 표시 함수
+let achievementQueue = [];
+let isShowingAchievement = false;
+
+function showAchievementQueue(achievements){
+    achievementQueue.push(...achievements);
+    if(!isShowingAchievement) showNextAchievement();
+}
+
+function showNextAchievement(){
+    if(achievementQueue.length === 0){
+        isShowingAchievement = false;
+        return;
+    }
+    isShowingAchievement = true;
+    const ach = achievementQueue.shift();
+    
+    document.getElementById('achPopupIcon').textContent = ach.icon || '🏆';
+    document.getElementById('achPopupName').textContent = ach.name;
+    document.getElementById('achPopupDesc').textContent = ach.desc;
+    
+    const popup = document.getElementById('achievementPopup');
+    popup.classList.add('show');
+    
+    // 클릭하면 닫기
+    popup.onclick = () => {
+        popup.classList.remove('show');
+        setTimeout(showNextAchievement, 300);
+    };
+    
+    // 3초 후 자동 닫기
+    setTimeout(() => {
+        if(popup.classList.contains('show')){
+            popup.classList.remove('show');
+            setTimeout(showNextAchievement, 300);
+        }
+    }, 3000);
+}
+
 function generateLogContent(){
   const h = ["time","mode","action","moved_wid","from_idx","to_idx","drag_dist","scroll_pos","inversion_count","is_error_move","order_snapshot"];
   let c1 = h.join(",") + "\n";
@@ -1374,7 +1572,7 @@ function resetAll(){
   listEl.innerHTML=""; items=[];
   sizeSel.disabled=false; startBtn.disabled=!isDataReady; resetBtn.disabled=true;
   resetBtn.style.display="none"; // 플로팅 리셋 버튼 숨김
-  logBtn.style.display="none"; memoBox.style.display="block"; listWrap.style.display="none";
+  memoBox.style.display="block"; listWrap.style.display="none";
   updateHud(false, true);
   
   // UI 상태 복구: 게임 패널 숨김 -> 랭킹 버튼 표시
@@ -1392,12 +1590,189 @@ function downloadFile(fn, c){
   const BOM = "\uFEFF"; const blob = new Blob([BOM + c], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = fn; document.body.appendChild(a); a.click(); a.remove();
 }
-logBtn.addEventListener("click", () => {
-  const { c1, c2 } = generateLogContent();
-  const p = `sorted_exp_${userInfo.id}_${userInfo.name}`;
-  downloadFile(`${p}_Actions_Enhanced.csv`, c1);
-  setTimeout(() => { downloadFile(`${p}_Words.csv`, c2); }, 500);
-});
+
+// My Page UI Updater
+function updateMyPageUI(myCodes, stats){
+    const listDiv = document.getElementById('myAchList');
+    if(!listDiv) return;
+    
+    // Definition mapping for display
+    const achDefs = [
+        { id: 'clear_easy', icon: '🚩', name: '하남자 정복', desc: '하남자 난이도 클리어' },
+        { id: 'speed_easy', icon: '👧', name: '하남자의 왕', desc: '10초 이내 클리어' },
+        { id: 'clear_normal', icon: '🚩', name: '중남자 정복', desc: '중남자 난이도 클리어' },
+        { id: 'speed_normal', icon: '👦', name: '중남자의 왕', desc: '60초 이내 클리어' },
+        { id: 'clear_hard', icon: '🚩', name: '상남자 정복', desc: '상남자 난이도 클리어' },
+        { id: 'speed_hard', icon: '😎', name: '상남자의 왕', desc: '180초 이내 클리어' },
+        { id: 'clear_extreme', icon: '🤫', name: '씹상남자 정복', desc: '씹상남자 난이도 클리어' },
+        { id: 'speed_extreme', icon: '👑', name: '씹상남자의 왕', desc: '600초 이내 클리어' },
+        { id: 'god_hand', icon: '🎯', 'name': '신의 손', 'desc': '진행도를 낮추지 않고 완벽 클리어' },
+        { id: 'slow_steady', icon: '🔥', 'name': '불굴의 의지', 'desc': '오랜 시간(난이도별 기준) 끝에 승리' },
+        { id: 'ranker', icon: '🏆', 'name': '명예의 전당', 'desc': '랭킹 Top 5 진입' },
+        { id: 'goat', icon: '🐐', 'name': 'GOAT', 'desc': '랭킹 1위 달성' },
+        { id: 'lucky_seven', icon: '🍀', 'name': '럭키세븐', 'desc': '기록 .77초 달성' },
+        { id: 'veteran_10', icon: '⚔️', 'name': '전장의 지배자', 'desc': '10회 클리어 달성' },
+        { id: 'real_man', icon: '☠️', 'name': '남자중의 남자', 'desc': '업적 10개 달성' },
+        { id: 'secret_master', icon: '❓', 'name': '???', 'desc': '???', unlockedIcon: '🔱', unlockedName: '신', unlockedDesc: '모든 업적 달성' },
+    ];
+
+    let html = "";
+    achDefs.forEach(def => {
+        const has = myCodes.includes(def.id);
+        // Show unlocked normally, locked as grayed out
+        const style = has ? "opacity:1; background:#f0f9ff; border-color:#bae6fd;" : "opacity:0.5; filter:grayscale(100%); background:#f8fafc;";
+        const per = (stats && stats[def.id] !== undefined) ? stats[def.id] + '%' : '0%';
+        
+        // Use unlocked name/desc/icon if available and unlocked
+        const displayName = (has && def.unlockedName) ? def.unlockedName : def.name;
+        const displayDesc = (has && def.unlockedDesc) ? def.unlockedDesc : def.desc;
+        const displayIcon = (has && def.unlockedIcon) ? def.unlockedIcon : def.icon;
+        
+        html += `
+            <div style="display:flex; align-items:center; gap:12px; padding:12px; border:1px solid #e2e8f0; border-radius:12px; ${style}">
+                <div style="font-size:32px; flex-shrink:0;">${displayIcon}</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+                        <span style="font-weight:700; color:#0f172a; font-size:15px; white-space:nowrap;">${displayName}</span>
+                        <span style="font-size:11px; font-weight:600; color:#64748b; background:#e2e8f0; padding:2px 6px; border-radius:4px; white-space:nowrap;">전체 ${per}</span>
+                    </div>
+                    <div style="font-size:12px; color:#64748b; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${displayDesc}</div>
+                </div>
+            </div>
+        `;
+    });
+    listDiv.innerHTML = html;
+    
+    // Update Profile Info (text only, don't replace structure)
+    const nameDisp = document.getElementById('myNameDisplay');
+    const idDisp = document.getElementById('myIdDisplay');
+    const avatarEl = document.getElementById('profileAvatar');
+    
+    if(nameDisp) nameDisp.textContent = userInfo.name || "User";
+    if(idDisp) idDisp.textContent = `ID: ${userInfo.id || "-"}`;
+    if(avatarEl && userInfo.avatar) {
+        // Keep the edit badge, just change the main emoji
+        avatarEl.childNodes[0].textContent = userInfo.avatar;
+    }
+}
+
+// Global scope functions for Name Edit (toggle)
+window.enableNameEdit = function(){
+    const form = document.getElementById('nameEditForm');
+    if(form.style.display === 'flex'){
+        form.style.display = 'none';
+    } else {
+        form.classList.remove('hidden');
+        form.style.display = 'flex';
+        document.getElementById('newNameInput').value = userInfo.name || '';
+    }
+}
+window.saveNewName = async function(){
+    const newName = document.getElementById('newNameInput').value.trim();
+    if(!newName) return;
+    
+    if(confirm(`닉네임을 '${newName}'(으)로 변경하시겠습니까?\n(랭킹판의 기존 기록도 모두 변경됩니다.)`)){
+        try {
+            const res = await fetch(`${API_BASE}/update_profile.php`, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ id: userInfo.id, new_name: newName })
+            });
+            const data = await res.json();
+            if(data.success){
+                alert("변경되었습니다.");
+                userInfo.name = newName;
+                document.getElementById('myNameDisplay').textContent = newName;
+                document.getElementById('nameEditForm').style.display = 'none';
+            } else {
+                alert(data.message || "오류가 발생했습니다.");
+            }
+        } catch(e){ console.error(e); alert("통신 오류가 발생했습니다."); }
+    }
+}
+
+// 아바타 선택 기능
+window.showAvatarPicker = function(){
+    const picker = document.getElementById('avatarPicker');
+    if(picker.style.display === 'none'){
+        populateAvatarPicker(); // 열 때마다 업적 상태 반영
+        picker.style.display = 'block';
+    } else {
+        picker.style.display = 'none';
+    }
+}
+
+window.selectAvatar = async function(emoji){
+    // Update UI immediately
+    const avatarEl = document.getElementById('profileAvatar');
+    // Keep the edit badge, just change the main emoji
+    avatarEl.childNodes[0].textContent = emoji;
+    document.getElementById('avatarPicker').style.display = 'none';
+    
+    // Save to server
+    try {
+        await fetch(`${API_BASE}/update_profile.php`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ id: userInfo.id, avatar: emoji })
+        });
+        userInfo.avatar = emoji;
+        showToast("아바타가 변경되었습니다!");
+    } catch(e){ console.error(e); }
+}
+
+// 로그아웃 기능
+window.logout = function(){
+    if(confirm("로그아웃 하시겠습니까?")){
+        userInfo = { id: "", name: "", avatar: "" };
+        localStorage.removeItem('questree_user');
+        document.getElementById('myPageModal').classList.add('hidden');
+        loginModal.classList.remove('hidden');
+        showToast("로그아웃 되었습니다.");
+    }
+}
+
+// 아바타 피커 채우기 (업적 기반)
+const BASE_AVATARS = ['🧑‍💻', '👤', '🧑', '👩', '👨', '🧒', '🐱', '🐶', '🐻', '🦊', '🐰', '🐼'];
+const ACHIEVEMENT_AVATARS = [
+    { emoji: '🚩', achId: 'clear_easy', name: '하남자 정복' },
+    { emoji: '👧', achId: 'speed_easy', name: '하남자의 왕' },
+    { emoji: '👦', achId: 'speed_normal', name: '중남자의 왕' },
+    { emoji: '😎', achId: 'speed_hard', name: '상남자의 왕' },
+    { emoji: '🤫', achId: 'clear_extreme', name: '씹상남자 정복' },
+    { emoji: '👑', achId: 'speed_extreme', name: '씹상남자의 왕' },
+    { emoji: '🎯', achId: 'god_hand', name: '신의 손' },
+    { emoji: '🔥', achId: 'slow_steady', name: '불굴의 의지' },
+    { emoji: '🏆', achId: 'ranker', name: '명예의 전당' },
+    { emoji: '🐐', achId: 'goat', name: 'GOAT' },
+    { emoji: '🍀', achId: 'lucky_seven', name: '럭키세븐' },
+    { emoji: '⚔️', achId: 'veteran_10', name: '전장의 지배자' },
+    { emoji: '☠️', achId: 'real_man', name: '남자중의 남자' },
+    { emoji: '🔱', achId: 'secret_master', name: '신', lockedEmoji: '❓', lockedName: '???' },
+];
+
+function populateAvatarPicker(){
+    const myAchs = userInfo.achievements || [];
+    
+    // Base avatars
+    const baseDiv = document.getElementById('baseAvatars');
+    baseDiv.innerHTML = BASE_AVATARS.map(e => 
+        `<span class="avatar-option" onclick="selectAvatar('${e}')">${e}</span>`
+    ).join('');
+    
+    // Achievement avatars
+    const achDiv = document.getElementById('achievementAvatars');
+    achDiv.innerHTML = ACHIEVEMENT_AVATARS.map(a => {
+        const unlocked = myAchs.includes(a.achId);
+        // For secret achievement: show ❓ when locked, actual emoji when unlocked
+        const displayEmoji = unlocked ? a.emoji : (a.lockedEmoji || a.emoji);
+        if(unlocked){
+            return `<span class="avatar-option" onclick="selectAvatar('${a.emoji}')" title="${a.name}">${displayEmoji}</span>`;
+        } else {
+            return `<span class="avatar-option locked" title="🔒 ${a.lockedName || a.name} 업적 달성 필요">${displayEmoji}</span>`;
+        }
+    }).join('');
+}
 
 // 초기 실행 시
 resetAll();

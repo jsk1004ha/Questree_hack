@@ -83,16 +83,20 @@ if ($inputPass === $adminPass) {
         }
     }
     
-    // 4. Reset Data
+    // 4. Reset Data (with PRG pattern to prevent refresh re-submit)
     if (isset($_POST['reset_target'])) {
         $target = $_POST['reset_target'];
+        $msg = '';
         if ($target === 'rankings') {
-            file_put_contents('../data/rankings.json', json_encode([]));
-            echo "<script>alert('🏆 랭킹 데이터 초기화 완료');</script>";
+            file_put_contents('../data/rankings.json', json_encode([]), LOCK_EX);
+            $msg = urlencode('🏆 랭킹 데이터 초기화 완료');
         } elseif ($target === 'users') {
-            file_put_contents('../data/users.json', json_encode([]));
-            echo "<script>alert('👥 사용자 데이터 초기화 완료');</script>";
+            file_put_contents('../data/users.json', json_encode([]), LOCK_EX);
+            $msg = urlencode('👥 사용자 데이터 초기화 완료');
         }
+        // PRG Redirect to prevent refresh re-submission
+        header("Location: admin.php?pass=$inputPass&msg=$msg");
+        exit;
     }
 }
 
@@ -120,6 +124,9 @@ $rankings = file_exists($rankFile) ? json_decode(file_get_contents($rankFile), t
     </style>
 </head>
 <body>
+    <?php if(isset($_GET['msg']) && $_GET['msg']): ?>
+    <script>alert(decodeURIComponent('<?php echo $_GET['msg']; ?>'));</script>
+    <?php endif; ?>
     <h1>📊 Data Viewer</h1>
     
     <!-- Admin Actions UI -->

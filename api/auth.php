@@ -56,7 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (password_verify($pw, $storedHash)) {
-                echo json_encode(['success' => true, 'name' => $users[$id]['name']]);
+                echo json_encode([
+                    'success' => true, 
+                    'name' => $users[$id]['name'],
+                    'avatar' => $users[$id]['avatar'] ?? '',
+                    'achievements' => $users[$id]['achievements'] ?? []
+                ]);
             } else {
                 echo json_encode(['success' => false, 'message' => '비밀번호가 일치하지 않습니다.']);
             }
