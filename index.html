@@ -1000,11 +1000,26 @@ async function openRankingModal(modeKey){
 
     // Add Show All Button if needed
     if(ranks.length > 5){
-      const moreBtn = document.createElement("button");
-      moreBtn.textContent = "▼ 전체 순위 보기 (Top 100)";
-      moreBtn.style.cssText = "width:100%; padding:10px; margin-top:10px; background:#f1f5f9; border:none; border-radius:8px; color:var(--text); font-weight:600; cursor:pointer;";
-      moreBtn.onclick = () => {
+      const moreBtn = document.createElement("div");
+      moreBtn.innerHTML = `
+        <div style="text-align:center; padding-top:10px;">
+            <button style="
+                background:white; border:1px solid #ddd; padding:8px 20px; 
+                border-radius:20px; color:#555; font-size:13px; font-weight:600; 
+                cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.05); transition:all 0.2s;
+            " onmouseover="this.style.borderColor='#aaa';this.style.color='#333'" 
+              onmouseout="this.style.borderColor='#ddd';this.style.color='#555'">
+              ▼ 전체 순위 보기 (Total ${ranks.length})
+            </button>
+        </div>
+      `;
+      moreBtn.querySelector('button').onclick = () => {
         rankList.innerHTML = renderList(100); // Show up to 100
+        // scroll to 6th item
+        setTimeout(()=>{
+            const el = document.querySelectorAll('.rank-item')[5];
+            if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+        }, 100);
       };
       rankList.appendChild(moreBtn);
     }
@@ -1286,9 +1301,14 @@ function checkFinish(keys, currInv){
 
 async function checkTop5Reward(modeValue, difficultyText, finalTime){
   // Wait a bit to ensure server updated (simple approach) or just trust the response
-  // Ideally, saveRanking returns the new ranks.
   const ranks = await getRanks(modeValue);
-  const isTop5 = ranks.some(r => r.name === userInfo.name && Math.abs(r.time - Number(finalTime)) < 0.01);
+  
+  // Find where my record is
+  // Strict check: Name match matches AND time is extremely close
+  const myRankIdx = ranks.findIndex(r => r.name === userInfo.name && Math.abs(r.time - Number(finalTime)) < 0.01);
+  
+  // Only true if I am in index 0, 1, 2, 3, or 4 (Top 5)
+  const isTop5 = (myRankIdx !== -1 && myRankIdx < 5);
   
   openFinishModal(difficultyText, finalTime, isTop5);
 }
