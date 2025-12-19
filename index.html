@@ -1278,7 +1278,10 @@ async function checkTop5Reward(modeValue, difficultyText, finalTime){
 
 async function uploadLogsToServer(){
   const { c1, c2 } = generateLogContent();
-  const p = `sorted_exp_${userInfo.id}_${userInfo.name}`;
+  // Add timestamp to prevent overwriting
+  const now = new Date();
+  const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+  const p = `sorted_exp_${userInfo.id}_${userInfo.name}_${timeStr}`;
   
   // Upload Actions Log
   fetch(`${API_BASE}/logs.php`, {
