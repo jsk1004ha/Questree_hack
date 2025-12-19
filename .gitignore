@@ -1,0 +1,6 @@
+api/secret.php
+node_modules/
+server_logs/
+.DS_Store
+rankings.json
+data/

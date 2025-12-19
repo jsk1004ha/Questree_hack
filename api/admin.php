@@ -5,7 +5,11 @@ $userFile = '../data/users.json';
 $rankFile = '../data/rankings.json';
 
 // Simple Password Protection (Hardcoded for simplicity)
-$adminPass = "1234"; // Default Password
+// Load password from external file (ignored by git)
+$adminPass = "1234"; // Fallback default
+if (file_exists('secret.php')) {
+    include 'secret.php';
+}
 $inputPass = $_POST['pass'] ?? $_GET['pass'] ?? '';
 
 if ($inputPass !== $adminPass) {
