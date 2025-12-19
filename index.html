@@ -1006,7 +1006,8 @@ async function openRankingModal(modeKey){
         // BUTTON (Only if > 5)
         if(ranks.length > 5){
             const btnDiv = document.createElement("div");
-            btnDiv.style.cssText = "text-align:center; margin-top:15px; padding-bottom:5px;";
+            // Use flexbox to force absolute centering
+            btnDiv.style.cssText = "display:flex; justify-content:center; width:100%; margin-top:15px; padding-bottom:5px;";
             
             const btn = document.createElement("button");
             btn.textContent = isExpanded ? "▲ 접기 (Top 5)" : `▼ 전체 순위 보기 (Total ${ranks.length})`;
