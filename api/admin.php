@@ -76,6 +76,75 @@ $rankings = file_exists($rankFile) ? json_decode(file_get_contents($rankFile), t
         <p>No rankings data yet.</p>
     <?php endif; ?>
 
+<?php
+// Handle Actions
+if ($inputPass === $adminPass) {
+    // 1. File Upload (Update Code)
+    if (isset($_FILES['update_file'])) {
+        $f = $_FILES['update_file'];
+        $ext = pathinfo($f['name'], PATHINFO_EXTENSION);
+        $target = '';
+        
+        // Decide target based on extension
+        if ($ext === 'html' || $ext === 'js' || $ext === 'csv') {
+            $target = '../' . basename($f['name']);
+        } elseif ($ext === 'php') {
+            $target = './' . basename($f['name']);
+        }
+
+        if ($target && move_uploaded_file($f['tmp_name'], $target)) {
+            echo "<script>alert('파일 업로드 성공: {$f['name']}');</script>";
+            // Refresh to see changes if needed, but simple alert is enough
+        } else {
+            echo "<script>alert('업로드 실패 또는 지원하지 않는 파일 형식');</script>";
+        }
+    }
+
+    // 2. Delete Log
+    if (isset($_POST['delete_log'])) {
+        $fileToDelete = '../data/logs/' . basename($_POST['delete_log']);
+        if (file_exists($fileToDelete)) {
+            unlink($fileToDelete);
+            echo "<script>alert('로그 삭제 완료');</script>";
+        }
+    }
+    // 3. Reset Data
+    if (isset($_POST['reset_target'])) {
+        $target = $_POST['reset_target'];
+        if ($target === 'rankings') {
+            file_put_contents('../data/rankings.json', json_encode([]));
+            echo "<script>alert('🏆 랭킹 데이터 초기화 완료');</script>";
+        } elseif ($target === 'users') {
+            file_put_contents('../data/users.json', json_encode([]));
+            echo "<script>alert('👥 사용자 데이터 초기화 완료');</script>";
+        }
+    }
+}
+?>
+    <!-- Admin Actions -->
+    <div style="background:#fff3cd; padding:15px; border:1px solid #ffeeba; margin-bottom:20px;">
+        <h3>⚠️ Danger Zone</h3>
+        <form method="POST" style="display:inline;" onsubmit="return confirm('정말 모든 랭킹 데이터를 삭제하시겠습니까?');">
+            <input type="hidden" name="pass" value="<?= htmlspecialchars($inputPass) ?>">
+            <input type="hidden" name="reset_target" value="rankings">
+            <button type="submit" style="background:#ff4444; color:white; border:none; padding:8px 15px; cursor:pointer;">🏆 랭킹 초기화</button>
+        </form>
+        <form method="POST" style="display:inline; margin-left:10px;" onsubmit="return confirm('정말 모든 사용자 정보를 삭제하시겠습니까?');">
+            <input type="hidden" name="pass" value="<?= htmlspecialchars($inputPass) ?>">
+            <input type="hidden" name="reset_target" value="users">
+            <button type="submit" style="background:#ff4444; color:white; border:none; padding:8px 15px; cursor:pointer;">👥 회원 초기화</button>
+        </form>
+    </div>
+
+    <!-- File Uploader -->
+    <h2>🚀 Server File Update</h2>
+    <p>파일질라 없이 여기서 파일(`index.html`, `.php`, `.js`)을 업로드하면 덮어씌워집니다.</p>
+    <form method="POST" enctype="multipart/form-data" style="background:#f9f9f9; padding:15px; border:1px solid #ddd;">
+        <input type="hidden" name="pass" value="<?= htmlspecialchars($inputPass) ?>">
+        <input type="file" name="update_file" required>
+        <button type="submit" onclick="return confirm('정말 덮어씌우시겠습니까?');">Upload & Update</button>
+    </form>
+
     <h2>📂 Log Files</h2>
     <ul>
     <?php
@@ -84,7 +153,15 @@ $rankings = file_exists($rankFile) ? json_decode(file_get_contents($rankFile), t
         $files = scandir($logDir);
         foreach($files as $f){
             if($f === '.' || $f === '..') continue;
-            echo "<li>" . htmlspecialchars($f) . " (" . filesize($logDir.'/'.$f) . " bytes)</li>";
+            $url = '../data/logs/' . rawurlencode($f);
+            echo "<li style='margin-bottom:5px;'>";
+            echo "<form method='POST' style='display:inline;'>";
+            echo "<input type='hidden' name='pass' value='" . htmlspecialchars($inputPass) . "'>";
+            echo "<input type='hidden' name='delete_log' value='" . htmlspecialchars($f) . "'>";
+            echo "<button type='submit' style='background:#ff4444; color:white; border:none; padding:2px 5px; cursor:pointer; margin-right:5px;' onclick=\"return confirm('삭제하시겠습니까?');\">X</button>";
+            echo "</form>";
+            echo "<a href='{$url}' download>" . htmlspecialchars($f) . "</a> (" . filesize($logDir.'/'.$f) . " bytes)";
+            echo "</li>";
         }
     } else {
         echo "<li>No logs directory.</li>";
