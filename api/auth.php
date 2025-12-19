@@ -10,10 +10,10 @@ $userFile = '../data/users.json';
 if (!file_exists('../data')) { mkdir('../data', 0777, true); }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $input['action'] ?? '';
-    $id = trim($input['id'] ?? '');
-    $pw = trim($input['pw'] ?? '');
-    $name = trim($input['name'] ?? ''); // Name is optional for login, required for register
+    $action = $_POST['action'] ?? '';
+    $id = trim($_POST['id'] ?? '');
+    $pw = trim($_POST['pw'] ?? '');
+    $name = trim($_POST['name'] ?? ''); // Name is optional for login, required for register
 
     if (!$id || !$pw) {
         echo json_encode(['success' => false, 'message' => '아이디와 비밀번호를 입력해주세요.']);
