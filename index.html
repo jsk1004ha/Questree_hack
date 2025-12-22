@@ -1829,6 +1829,7 @@ function generateLogContent(){
 
 function resetAll(){
   started=false; finished=false; stopScrollLoop(); clearInterval(timerId);
+  window.isResultRecorded = false; // Reset duplicate prevention flag
   if(typeof pvpResultPollInterval !== 'undefined' && pvpResultPollInterval) clearInterval(pvpResultPollInterval);
   if(sortableInst) sortableInst.destroy(); sortableInst=null;
   document.querySelectorAll(".timer-display").forEach(el=>el.textContent="0.00");
@@ -2797,7 +2798,8 @@ function showMultiplayerResult(players){
     }, 2000);
     
     // Record PVP result to server
-    if(typeof isWinner !== 'undefined') {
+    if(typeof isWinner !== 'undefined' && !window.isResultRecorded) {
+        window.isResultRecorded = true;
         const result = isWinner ? 'win' : 'loss';
         fetch(`${API_BASE}/pvp.php`, {
             method: 'POST',
