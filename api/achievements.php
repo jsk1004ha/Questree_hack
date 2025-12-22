@@ -138,11 +138,41 @@ if($totalUnlockedCount >= 10 && !in_array('real_man', $myAch)){
     }
 }
 
-// 9. Secret ??? Achievement (All 14 regular achievements unlocked)
+// 9. PVP Achievements
+$pvpStats = $users[$id]['pvp_stats'] ?? ['wins' => 0, 'losses' => 0];
+$pvpWins = $pvpStats['wins'] ?? 0;
+
+// First PVP Win
+if($pvpWins >= 1 && !in_array('pvp_first_win', $myAch)){
+    $newUnlocked[] = ['id' => 'pvp_first_win', 'icon' => '🥊', 'name' => '첫 승리', 'desc' => 'PVP에서 첫 승리를 거뒀습니다!'];
+    $myAch[] = 'pvp_first_win';
+}
+
+// 10 PVP Wins
+if($pvpWins >= 10 && !in_array('pvp_10_wins', $myAch)){
+    $newUnlocked[] = ['id' => 'pvp_10_wins', 'icon' => '🎖️', 'name' => 'PVP 마스터', 'desc' => 'PVP 10승 달성!'];
+    $myAch[] = 'pvp_10_wins';
+}
+
+// 50 PVP Wins
+if($pvpWins >= 50 && !in_array('pvp_50_wins', $myAch)){
+    $newUnlocked[] = ['id' => 'pvp_50_wins', 'icon' => '💀', 'name' => 'PVP 전설', 'desc' => 'PVP 50승 달성! 당신은 전설입니다.'];
+    $myAch[] = 'pvp_50_wins';
+}
+
+// 5 Win Streak
+$maxStreak = $pvpStats['max_streak'] ?? 0;
+if($maxStreak >= 5 && !in_array('pvp_5_streak', $myAch)){
+    $newUnlocked[] = ['id' => 'pvp_5_streak', 'icon' => '🔥', 'name' => '불패', 'desc' => 'PVP 5연승 달성!'];
+    $myAch[] = 'pvp_5_streak';
+}
+
+// 10. Secret ??? Achievement (All 14 regular achievements unlocked)
 $allAchievements = [
     'clear_easy', 'clear_normal', 'clear_hard', 'clear_extreme',
     'speed_easy', 'speed_normal', 'speed_hard', 'speed_extreme',
-    'god_hand', 'slow_steady', 'ranker', 'goat', 'lucky_seven', 'veteran_10', 'real_man'
+    'god_hand', 'slow_steady', 'ranker', 'goat', 'lucky_seven', 'veteran_10', 'real_man',
+    'pvp_first_win', 'pvp_10_wins', 'pvp_50_wins'
 ];
 $hasAll = true;
 foreach($allAchievements as $achId){

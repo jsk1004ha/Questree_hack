@@ -87,6 +87,7 @@ body::before {
 }
 
 /* 게임 활성화 시 상단 정렬 및 적절한 여백 */
+/* 게임 활성화 시 상단 정렬 및 적절한 여백 */
 body:has(.card.game-active) {
   align-items: flex-start;
   padding: 16px 0;
@@ -405,6 +406,7 @@ button{
   transition: all 0.2s;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 button.primary{ background: var(--primary); color: white; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3); }
@@ -596,14 +598,16 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
 .stat-item { display: flex; flex-direction: column; gap: 4px; }
 .stat-label { font-size: 12px; color: var(--muted); font-weight: 600; }
 .stat-value { font-size: 18px; font-weight: 800; color: var(--primary-dark); font-family: monospace; }
+/* Utility */
+.hidden { display: none !important; }
 </style>
 
 </head>
 
 <body>
 
-<!-- 로그인 모달 -->
-<div class="modalOverlay" id="loginModal">
+<!-- 로그인 모달 (hidden by default, shown if no session) -->
+<div class="modalOverlay hidden" id="loginModal">
   <div class="modalCard">
     <div class="loginTitle">실험 참가자 정보</div>
     <div class="loginDesc">데이터 수집을 위해 정보를 입력해주세요.</div>
@@ -635,12 +639,19 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
 
 <!-- 랭킹 모달 (NEW) -->
 <div class="modalOverlay hidden" id="rankingModal">
-  <div class="modalCard">
+  <div class="modalCard" style="max-width:450px;">
     <button class="modalCloseBtn" id="rankingCloseBtn">✕</button>
     <div class="loginTitle">🏆 명예의 전당</div>
+    
+    <!-- 탭 버튼 -->
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="rankTabSolo" class="rankTab active" onclick="switchRankTab('solo')" style="flex:1; padding:10px; border:none; border-radius:8px; background:#0ea5e9; color:white; font-weight:700; cursor:pointer;">🎮 솔로</button>
+        <button id="rankTabPvp" class="rankTab" onclick="switchRankTab('pvp')" style="flex:1; padding:10px; border:none; border-radius:8px; background:#e2e8f0; color:#64748b; font-weight:700; cursor:pointer;">⚔️ PVP</button>
+    </div>
+    
     <div class="loginDesc" id="rankingModalSubtitle">Best Records</div>
     
-    <div class="rank-list-modal" id="rankList">
+    <div id="rankList" style="max-height:300px; overflow-y:auto; padding-right:8px;">
       <!-- JS로 채워짐 -->
     </div>
     
@@ -681,6 +692,29 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
         <div id="achievementAvatars" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
     </div>
 
+    <!-- PVP 전적 섹션 -->
+    <div style="margin-bottom:20px; padding:16px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px;">
+        <div style="font-size:14px; font-weight:700; color:#166534; margin-bottom:12px;">⚔️ PVP 전적</div>
+        <div id="pvpStatsDisplay" style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center;">
+            <div style="text-align:center;">
+                <div style="font-size:24px; font-weight:800; color:#0f172a;" id="pvpTotalGames">0</div>
+                <div style="font-size:11px; color:#64748b;">전</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:24px; font-weight:800; color:#22c55e;" id="pvpWins">0</div>
+                <div style="font-size:11px; color:#64748b;">승</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:24px; font-weight:800; color:#ef4444;" id="pvpLosses">0</div>
+                <div style="font-size:11px; color:#64748b;">패</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size:24px; font-weight:800; color:#3b82f6;" id="pvpWinRate">0%</div>
+                <div style="font-size:11px; color:#64748b;">승률</div>
+            </div>
+        </div>
+    </div>
+
     <div style="font-size:16px; font-weight:800; margin-bottom:15px; ">🎖️ 획득한 업적</div>
     <div id="myAchList" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; max-height:250px; overflow-y:auto;">
         <!-- JS채움 -->
@@ -709,6 +743,8 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
   </div>
 </div>
 
+<!-- PVP Modals Moved to End of Body -->
+
 
 <!-- Desktop HUD -->
 <div class="hud-pill" id="desktopHud">
@@ -723,7 +759,7 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
   </div>
 </div>
 
-<div class="card">
+<div class="card" id="card">
   <!-- 헤더 -->
   <div class="header">
 
@@ -830,6 +866,105 @@ button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none !important; 
 
 <!-- 로그 다운로드 버튼 제거됨 (관리자는 admin.php에서 다운로드 가능) -->
 
+<!-- PVP Modals (Moved for layout stability) -->
+<div class="modalOverlay hidden" id="modeSelectModal">
+  <div class="modalCard" style="max-width: 400px; text-align:center;">
+    <button class="modalCloseBtn" onclick="document.getElementById('modeSelectModal').classList.add('hidden')">✕</button>
+    <div style="font-size:24px; font-weight:800; margin-bottom:20px; text-align:center;">🎮 모드 선택</div>
+    <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+      <button class="secondary" onclick="startSoloGame()" style="padding:16px 32px; font-size:16px; width:100%; text-align:center;">👤 혼자 하기</button>
+      <button class="primary loginBtn" onclick="openPvpLobby()" style="padding:16px 32px; font-size:16px; width:100%;">⚔️ 대전 하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- PVP 로비 모달 -->
+<div class="modalOverlay hidden" id="pvpLobbyModal">
+  <div class="modalCard" style="max-width: 500px; text-align:left;">
+    <button class="modalCloseBtn" onclick="closePvpLobby()">✕</button>
+    <div style="font-size:22px; font-weight:800; margin-bottom:16px;">⚔️ 대전 로비</div>
+    <div style="display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid #e2e8f0;">
+      <button id="pvpTab1" onclick="setPvpTab(1)" style="padding:10px 16px; border:none; background:none; font-weight:600; cursor:pointer; border-bottom:2px solid var(--primary); color:var(--primary);">방 목록</button>
+      <button id="pvpTab2" onclick="setPvpTab(2)" style="padding:10px 16px; border:none; background:none; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:#64748b;">방 만들기</button>
+    </div>
+    <div id="pvpPanel1">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-size:14px; color:#64748b;">대기 중인 방</span>
+        <div style="display:flex; gap:6px;">
+          <button onclick="quickStart()" style="padding:4px 10px; font-size:12px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">⚡ 빠른시작</button>
+          <button onclick="refreshRoomList()" style="padding:4px 10px; font-size:12px; background:#f1f5f9; border:none; border-radius:4px; cursor:pointer;">🔄 새로고침</button>
+        </div>
+      </div>
+      <div id="publicRoomList" style="max-height:200px; overflow-y:auto;"></div>
+    </div>
+    <div id="pvpPanel2" style="display:none;">
+      <div style="margin-bottom:12px;">
+        <label style="font-size:14px; color:#64748b;">방 제목</label>
+        <input type="text" id="pvpRoomTitle" placeholder="방 제목 입력" maxlength="20" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; margin-top:8px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:14px; color:#64748b;">난이도</label>
+        <select id="pvpCreateMode" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; margin-top:8px;">
+          <option value="" disabled selected>난이도 선택</option>
+          <option value="10">하남자 (10개)</option>
+          <option value="20">중남자 (20개)</option>
+          <option value="40">상남자 (40개)</option>
+          <option value="80">씹상남자 (80개)</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:14px; color:#64748b;">최대 인원</label>
+        <select id="pvpMaxPlayers" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; margin-top:8px;">
+          <option value="2" selected>2명</option>
+          <option value="3">3명</option>
+          <option value="4">4명</option>
+          <option value="5">5명</option>
+          <option value="6">6명</option>
+          <option value="7">7명</option>
+          <option value="8">8명</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:14px; color:#64748b;">비밀번호 (선택)</label>
+        <input type="text" id="pvpPassword" placeholder="비밀번호 없으면 비워두세요" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; margin-top:8px;">
+      </div>
+      <button class="primary loginBtn" onclick="createPvpRoom()" style="width:100%; padding:14px;">방 만들기</button>
+    </div>
+    <!-- Lobby Chat -->
+    <div style="margin-top:16px; border-top:1px solid #e2e8f0; padding-top:12px;">
+      <div style="font-size:14px; font-weight:600; margin-bottom:8px;">💬 로비 채팅</div>
+      <div id="lobbyChatLog" style="height:80px; overflow-y:auto; padding:8px; font-size:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px;"></div>
+      <div style="display:flex; gap:4px;">
+        <input type="text" id="lobbyChatInput" placeholder="채팅 입력..." style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;" onkeypress="if(event.key==='Enter') sendLobbyChat()">
+        <button onclick="sendLobbyChat()" style="padding:8px 14px; background:var(--primary); color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer;">전송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PVP 대기실 모달 -->
+<div class="modalOverlay hidden" id="pvpWaitingModal">
+  <div class="modalCard" style="max-width: 420px;">
+    <div style="font-size:22px; font-weight:800; margin-bottom:12px;">⚔️ 대전 대기실</div>
+    <div id="pvpPlayerList" style="margin-bottom:16px; text-align:left;"></div>
+    <div id="pvpCountdown" style="font-size:48px; font-weight:800; color:var(--primary); display:none;">3</div>
+    <div id="pvpWaitingText" style="font-size:14px; color:#64748b; margin-bottom:12px;">플레이어를 기다리는 중...</div>
+    <!-- Chat -->
+    <div style="border:1px solid #e2e8f0; border-radius:8px; margin-bottom:12px;">
+      <div id="pvpChatLog" style="height:100px; overflow-y:auto; padding:8px; font-size:12px; background:#f8fafc;"></div>
+      <div style="display:flex; gap:4px; padding:4px;">
+        <input type="text" id="pvpChatInput" placeholder="채팅 입력..." style="flex:1; padding:6px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:12px;" onkeypress="if(event.key==='Enter') sendChat()">
+        <button onclick="sendChat()" style="padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:4px; font-size:12px; cursor:pointer;">전송</button>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <button id="pvpReadyBtn" class="secondary" onclick="toggleReady()" style="padding:12px 24px;">✋ 준비</button>
+      <button id="pvpStartBtn" class="primary" onclick="requestPvpStart()" style="padding:12px 24px; display:none;">게임 시작</button>
+      <button class="secondary" onclick="leavePvpRoom()" style="padding:12px 20px;">나가기</button>
+    </div>
+  </div>
+</div>
+
 <script src="./Sortable.js"></script>
 <script>
 /* 설정 */
@@ -844,12 +979,16 @@ const koCollator = new Intl.Collator("ko-KR", { sensitivity: "base" });
 const listEl = document.getElementById("list");
 const listWrap = document.getElementById("listWrap");
 const memoBox = document.getElementById("memoBox");
-const timerEl = document.getElementById("timer");
-const statusEl = document.getElementById("status");
+const initialModal = document.getElementById("initialModal");
+const cardEl = document.getElementById("card");
+const loginModal = document.getElementById("loginModal");
+const myPageModal = document.getElementById("myPageModal");
+const rankingModal = document.getElementById("rankingModal");
 const gaugeBarEl = document.getElementById("gaugeBar");
 const progressText = document.getElementById("progressText");
-// My Page Modal
-const myPageModal = document.getElementById('myPageModal');
+const timerEl = document.getElementById("timer");
+const statusEl = document.getElementById("status");
+
 
 // (Legacy Header Button Removed)
 const startBtn = document.getElementById("startBtn");
@@ -859,14 +998,14 @@ const sizeSel = document.getElementById("sizeSel");
 const toast = document.getElementById("toast");
 const desktopHud = document.getElementById("desktopHud");
 const contentArea = document.querySelector(".contentArea");
-const cardEl = document.querySelector(".card");
+
 const hudToggle = document.getElementById("hudToggle");
 
 // 랭킹 및 패널 UI
 const gameStatusPanel = document.getElementById("gameStatusPanel");
 const rankingBtnArea = document.getElementById("rankingBtnArea");
 const showRankingBtn = document.getElementById("showRankingBtn");
-const rankingModal = document.getElementById("rankingModal");
+
 const rankingCloseBtn = document.getElementById("rankingCloseBtn");
 const rankingOkBtn = document.getElementById("rankingOkBtn");
 const rankList = document.getElementById("rankList");
@@ -907,6 +1046,91 @@ if(myPageBtnMain){
 
 /* 상태값 */
 let userInfo = { id: "", name: "" };
+
+// function to start periodic session check
+let sessionCheckInterval = null;
+function startSessionCheck(){
+    if(sessionCheckInterval) clearInterval(sessionCheckInterval);
+    const checkSession = ()=>{
+        if(!userInfo.id || !userInfo.session_token) return;
+        fetch(`${API_BASE}/auth.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'validate_session', id:userInfo.id, session_token:userInfo.session_token})
+        }).then(r=>r.json()).then(data=>{
+            if(!data.valid){
+                localStorage.removeItem('questree_user');
+                userInfo = {id:'', name:''};
+                alert('다른 기기에서 로그인되어 로그아웃되었습니다.');
+                location.reload();
+            }
+        }).catch(()=>{});
+    };
+    sessionCheckInterval = setInterval(checkSession, 3000);
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkSession(); });
+}
+
+
+
+// Restore session from localStorage
+(function(){
+    const saved = localStorage.getItem('questree_user');
+    if(saved){
+        try {
+            const parsed = JSON.parse(saved);
+            if(parsed.id) {
+                userInfo = parsed;
+                // Basic restore successful -> Hide modal immediately (FORCE)
+                const lm = document.getElementById('loginModal');
+                if(lm) {
+                    lm.classList.add('hidden');
+                    lm.style.display = 'none'; // Double tap
+                }
+                
+                // Validate session with server if token exists
+                if(parsed.session_token){
+                    fetch(`${API_BASE}/auth.php`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({action:'validate_session', id:userInfo.id, session_token:userInfo.session_token})
+                    }).then(r=>r.json()).then(data=>{
+                        if(!data.valid){
+                            localStorage.removeItem('questree_user');
+                            userInfo = {id:'', name:''};
+                            alert('다른 기기에서 로그인되어 로그아웃되었습니다.');
+                            const loginModal = document.getElementById('loginModal');
+                            if(loginModal) loginModal.classList.remove('hidden');
+                        } else {
+                            // Start session check if valid
+                            startSessionCheck();
+                        }
+                    }).catch(()=>{});
+                }
+                
+                // Update avatar when DOM is ready
+                setTimeout(()=>{
+                    const avatarEl = document.getElementById('profileAvatar');
+                    if(avatarEl && userInfo.avatar) avatarEl.childNodes[0].textContent = userInfo.avatar;
+                }, 100);
+                return; // Session exists, keep modal hidden
+            }
+        } catch(e){
+            // If data is corrupted, clear it
+            localStorage.removeItem('questree_user');
+        }
+    }
+    // No valid session - show login modal
+    setTimeout(()=>{
+        // Safety check: if we have user info, DO NOT show modal
+        if(userInfo && userInfo.id) return;
+        
+        const loginModal = document.getElementById('loginModal');
+        if(loginModal) {
+            loginModal.classList.remove('hidden');
+            loginModal.style.display = ''; // Clear inline style
+        }
+    }, 50);
+})();
 let started = false;
 let finished = false;
 let startTime = 0;
@@ -929,7 +1153,7 @@ let prevInversionCount = -1;
 let errorCount = 0; // 에러 이동 횟수 (inversion 증가 시)
 
 /* 로그인 */
-const loginModal = document.getElementById("loginModal");
+/* 로그인 */
 /* 로그인 & 회원가입 로직 */
 const tabLogin = document.getElementById("tabLogin");
 const tabRegister = document.getElementById("tabRegister");
@@ -997,12 +1221,42 @@ async function handleAuth(){
       userInfo.name = data.name || nm;
       userInfo.avatar = data.avatar || '';
       userInfo.achievements = data.achievements || [];
+      userInfo.pvp_stats = data.pvp_stats || {wins: 0, losses: 0};
+      userInfo.session_token = data.session_token || '';
       loginModal.classList.add("hidden");
       showToast(authMode==="login" ? `환영합니다, ${userInfo.name}님!` : "가입 완료! 환영합니다.");
+      // Save to localStorage for persistence
+      localStorage.setItem('questree_user', JSON.stringify(userInfo));
       // Update avatar display if available
       if(userInfo.avatar){
         const avatarEl = document.getElementById('profileAvatar');
         if(avatarEl) avatarEl.childNodes[0].textContent = userInfo.avatar;
+      }
+      startSessionCheck(); // Start session check loop
+    } else if(data.duplicate){
+      // Duplicate login detected - ask to force login
+      if(confirm(data.message)){
+        // Retry with force flag
+        const forceRes = await fetch(`${API_BASE}/auth.php`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ action: 'login', id: id, pw: pw, force: 'true' })
+        });
+        const forceData = await forceRes.json();
+        if(forceData.success){
+          userInfo.id = id; 
+          userInfo.name = forceData.name;
+          userInfo.avatar = forceData.avatar || '';
+          userInfo.achievements = forceData.achievements || [];
+          userInfo.session_token = forceData.session_token || '';
+          loginModal.classList.add("hidden");
+          showToast(`환영합니다, ${userInfo.name}님!`);
+          localStorage.setItem('questree_user', JSON.stringify(userInfo));
+          startSessionCheck(); // Start session check loop
+        } else {
+          loginMsg.textContent = forceData.message || "오류가 발생했습니다.";
+          loginMsg.style.display="block";
+        }
       }
     } else {
       loginMsg.textContent = data.message || "오류가 발생했습니다.";
@@ -1179,7 +1433,8 @@ async function openRankingModal(modeKey){
 
 /* [UI] 랭킹 버튼 및 모달 핸들러 */
 showRankingBtn.addEventListener("click", () => {
-  openRankingModal();
+  rankingModal.classList.remove("hidden");
+  switchRankTab('solo');
 });
 function closeRankingModal(){ rankingModal.classList.add("hidden"); }
 rankingCloseBtn.addEventListener("click", closeRankingModal);
@@ -1242,7 +1497,9 @@ async function initBackgroundDataLoad(){
     await new Promise(r=>setTimeout(r,50));
     const reservoir = processCsvText(text);
     if(reservoir.length<100) throw new Error("Data missing");
-    koPool=reservoir; isDataReady=true;
+    koPool=reservoir; 
+    koPool.sort(); // Sort for PVP synchronization (deterministic order)
+    isDataReady=true;
     lb.textContent="✔ 준비 완료"; lb.style.color="#10B981";
     if(!started) startBtn.disabled=false;
   }catch(e){
@@ -1433,24 +1690,30 @@ function checkFinish(keys, currInv){
     gaugeBarEl.style.width="100%"; 
     document.querySelectorAll(".progress-text-display").forEach(el=>el.textContent="100%");
     
-    // 랭킹 저장
+    // 랭킹 저장 (PVP면 저장 안함)
     const finalTime = ((performance.now() - startTime) / 1000).toFixed(2);
     const difficultyText = sizeSel.options[sizeSel.selectedIndex].text;
     
-    // Save Ranking (Async)
-    saveRanking(sizeSel.value, userInfo.name, finalTime).then(() => {
-        // Refresh ranking check for modal if needed
-        checkTop5Reward(sizeSel.value, difficultyText, finalTime);
-        // Check Achievements
-        // Check Achievements (Pass value '10','20' etc for robust check)
-        checkAchievements(sizeSel.value, finalTime, errorCount);
-    });
+    // PVP 모드 체크 (변수가 선언되어 있어야 함)
+    const isPvp = (typeof pvpMode !== 'undefined' && pvpMode);
+
+    if(!isPvp) {
+      saveRanking(sizeSel.value, userInfo.name, finalTime).then(() => {
+          checkTop5Reward(sizeSel.value, difficultyText, finalTime);
+          checkAchievements(sizeSel.value, finalTime, errorCount);
+      });
+    }
 
     // Auto-Upload Logs
     logAction("END",0,0,0,0, currentWids().join("|"));
     uploadLogsToServer(); // Send logs immediately
     
     showToast(`정렬 완료! 기록: ${finalTime}초`);
+
+    // PVP 완료 처리
+    if(isPvp && typeof sendPvpFinish === 'function'){
+      sendPvpFinish(finalTime);
+    }
   }
 }
 
@@ -1473,7 +1736,8 @@ async function uploadLogsToServer(){
   // Add timestamp to prevent overwriting
   const now = new Date();
   const timeStr = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
-  const p = `sorted_exp_${userInfo.id}_${userInfo.name}_${timeStr}`;
+  const isPvp = (typeof pvpMode !== 'undefined' && pvpMode);
+  const p = `sorted_exp_${userInfo.id}_${userInfo.name}_${timeStr}${isPvp ? '_PVP' : ''}`;
   
   // Upload Actions Log
   fetch(`${API_BASE}/logs.php`, {
@@ -1565,6 +1829,7 @@ function generateLogContent(){
 
 function resetAll(){
   started=false; finished=false; stopScrollLoop(); clearInterval(timerId);
+  if(typeof pvpResultPollInterval !== 'undefined' && pvpResultPollInterval) clearInterval(pvpResultPollInterval);
   if(sortableInst) sortableInst.destroy(); sortableInst=null;
   document.querySelectorAll(".timer-display").forEach(el=>el.textContent="0.00");
   setStatus("대기"); gaugeBarEl.style.width="0%"; 
@@ -1575,6 +1840,10 @@ function resetAll(){
   memoBox.style.display="block"; listWrap.style.display="none";
   updateHud(false, true);
   
+  // Restore finish close button
+  const finishCloseBtn = document.getElementById('finishCloseBtn');
+  if(finishCloseBtn) finishCloseBtn.style.display = 'block';
+  
   // UI 상태 복구: 게임 패널 숨김 -> 랭킹 버튼 표시
   gameStatusPanel.classList.remove("active");
   rankingBtnArea.classList.add("active");
@@ -1582,7 +1851,7 @@ function resetAll(){
   // 대기 화면으로 복귀 시 카드 크기 확대 (120%)
   if(cardEl) cardEl.classList.remove("game-active");
 }
-startBtn.addEventListener("click", startRun);
+startBtn.addEventListener("click", openModeSelect);
 resetBtn.addEventListener("click", resetAll);
 
 function toCsvCell(v){ const s = String(v ?? ""); if(/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`; return s; }
@@ -1613,6 +1882,10 @@ function updateMyPageUI(myCodes, stats){
         { id: 'lucky_seven', icon: '🍀', 'name': '럭키세븐', 'desc': '기록 .77초 달성' },
         { id: 'veteran_10', icon: '⚔️', 'name': '전장의 지배자', 'desc': '10회 클리어 달성' },
         { id: 'real_man', icon: '☠️', 'name': '남자중의 남자', 'desc': '업적 10개 달성' },
+        { id: 'pvp_first_win', icon: '🥊', 'name': '첫 승리', 'desc': 'PVP 첫 승리' },
+        { id: 'pvp_10_wins', icon: '🎖️', 'name': 'PVP 마스터', 'desc': 'PVP 10승 달성' },
+        { id: 'pvp_50_wins', icon: '💀', 'name': 'PVP 전설', 'desc': 'PVP 50승 달성' },
+        { id: 'pvp_5_streak', icon: '🔥', 'name': '불패', 'desc': 'PVP 5연승' },
         { id: 'secret_master', icon: '❓', 'name': '???', 'desc': '???', unlockedIcon: '🔱', unlockedName: '신', unlockedDesc: '모든 업적 달성' },
     ];
 
@@ -1651,9 +1924,25 @@ function updateMyPageUI(myCodes, stats){
     if(nameDisp) nameDisp.textContent = userInfo.name || "User";
     if(idDisp) idDisp.textContent = `ID: ${userInfo.id || "-"}`;
     if(avatarEl && userInfo.avatar) {
-        // Keep the edit badge, just change the main emoji
         avatarEl.childNodes[0].textContent = userInfo.avatar;
     }
+    
+    // Update PVP Stats
+    const pvpStats = userInfo.pvp_stats || {wins: 0, losses: 0};
+    const wins = pvpStats.wins || 0;
+    const losses = pvpStats.losses || 0;
+    const total = wins + losses;
+    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    
+    const totalEl = document.getElementById('pvpTotalGames');
+    const winsEl = document.getElementById('pvpWins');
+    const lossesEl = document.getElementById('pvpLosses');
+    const rateEl = document.getElementById('pvpWinRate');
+    
+    if(totalEl) totalEl.textContent = total;
+    if(winsEl) winsEl.textContent = wins;
+    if(lossesEl) lossesEl.textContent = losses;
+    if(rateEl) rateEl.textContent = winRate + '%';
 }
 
 // Global scope functions for Name Edit (toggle)
@@ -1724,11 +2013,19 @@ window.selectAvatar = async function(emoji){
 // 로그아웃 기능
 window.logout = function(){
     if(confirm("로그아웃 하시겠습니까?")){
+        if(typeof pvpRoomCode !== 'undefined' && pvpRoomCode && userInfo.id) {
+            try { 
+                const data = new URLSearchParams({action:'leave', room_code:pvpRoomCode, player_id:userInfo.id});
+                navigator.sendBeacon(`${API_BASE}/pvp.php`, data);
+            } catch(e){}
+        }
+        
         userInfo = { id: "", name: "", avatar: "" };
         localStorage.removeItem('questree_user');
-        document.getElementById('myPageModal').classList.add('hidden');
-        loginModal.classList.remove('hidden');
         showToast("로그아웃 되었습니다.");
+        
+        // Reload to clear clean state
+        setTimeout(() => location.reload(), 500);
     }
 }
 
@@ -1772,6 +2069,1110 @@ function populateAvatarPicker(){
             return `<span class="avatar-option locked" title="🔒 ${a.lockedName || a.name} 업적 달성 필요">${displayEmoji}</span>`;
         }
     }).join('');
+}
+
+// ============== PVP 시스템 ==============
+let pvpMode = false;
+let pvpRoomCode = null;
+let pvpIsHost = false;
+let pvpPollInterval = null;
+let pvpSeed = null;
+let pvpWords = null; // Server-provided word list for sync
+
+function openModeSelect(){
+    document.getElementById('modeSelectModal').classList.remove('hidden');
+}
+window.startSoloGame = function(){
+    document.getElementById('modeSelectModal').classList.add('hidden');
+    pvpMode = false;
+    startRun();
+}
+window.openPvpLobby = function(){
+    document.getElementById('modeSelectModal').classList.add('hidden');
+    document.getElementById('pvpLobbyModal').classList.remove('hidden');
+    setPvpTab(1);
+    refreshRoomList();
+    // Auto refresh every 1 second (no flicker since we only update on change)
+    if(window.roomRefreshInterval) clearInterval(window.roomRefreshInterval);
+    window.roomRefreshInterval = setInterval(refreshRoomList, 1000);
+    // Start lobby chat polling
+    refreshLobbyChat();
+    if(window.lobbyChatInterval) clearInterval(window.lobbyChatInterval);
+    window.lobbyChatInterval = setInterval(refreshLobbyChat, 1000);
+}
+window.closePvpLobby = function(){
+    document.getElementById('pvpLobbyModal').classList.add('hidden');
+    if(window.roomRefreshInterval) clearInterval(window.roomRefreshInterval);
+    if(window.lobbyChatInterval) clearInterval(window.lobbyChatInterval);
+}
+
+async function refreshLobbyChat(){
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'lobby_chat_list'})
+        });
+        const data = await res.json();
+        if(data.success && data.chat){
+            const log = document.getElementById('lobbyChatLog');
+            if(log){
+                log.innerHTML = data.chat.map(c => `<div><b>${c.name}:</b> ${c.msg}</div>`).join('');
+                log.scrollTop = log.scrollHeight;
+            }
+        }
+    } catch(e){}
+}
+
+window.sendLobbyChat = async function(){
+    const input = document.getElementById('lobbyChatInput');
+    const msg = input.value.trim();
+    if(!msg || !userInfo.id) return;
+    input.value = '';
+    // Show immediately locally
+    const log = document.getElementById('lobbyChatLog');
+    if(log){
+        log.innerHTML += `<div><b>${userInfo.name}:</b> ${msg}</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+    try {
+        await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'lobby_chat', name:userInfo.name, message:msg})
+        });
+    } catch(e){}
+}
+
+window.setPvpTab = function(n){
+    for(let i=1; i<=2; i++){
+        document.getElementById('pvpTab'+i).style.borderBottomColor = i===n ? 'var(--primary)' : 'transparent';
+        document.getElementById('pvpTab'+i).style.color = i===n ? 'var(--primary)' : '#64748b';
+        document.getElementById('pvpPanel'+i).style.display = i===n ? 'block' : 'none';
+    }
+}
+
+const modeLabels = {'10':'하남자','20':'중남자','40':'상남자','80':'씹상남자'};
+
+window.refreshRoomList = async function(){
+    const listEl = document.getElementById('publicRoomList');
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'list'})
+        });
+        const data = await res.json();
+        let newHtml;
+        if(data.success && data.rooms.length > 0){
+            newHtml = data.rooms.map(r => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px;">
+                    <div>
+                        <div style="font-weight:600;">${r.has_password ? '🔒 ' : ''}${r.title}</div>
+                        <div style="font-size:12px; color:#64748b;">${modeLabels[r.mode] || r.mode} | ${r.current_players}/${r.max_players}명</div>
+                    </div>
+                    <button onclick="joinRoom('${r.code}', ${r.has_password})" style="padding:8px 16px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer;">입장</button>
+                </div>
+            `).join('');
+        } else {
+            newHtml = '<div style="text-align:center; color:#64748b; padding:20px;">대기 중인 방이 없습니다</div>';
+        }
+        // Only update if content changed to prevent flicker
+        if(listEl.innerHTML !== newHtml) listEl.innerHTML = newHtml;
+    } catch(e){ if(!listEl.innerHTML) listEl.innerHTML = '<div style="color:red; padding:20px;">오류</div>'; }
+}
+
+window.createPvpRoom = async function(){
+    const title = document.getElementById('pvpRoomTitle').value.trim();
+    const mode = document.getElementById('pvpCreateMode').value;
+    if(!mode){ alert('난이도를 선택해주세요'); return; }
+    const maxPlayers = document.getElementById('pvpMaxPlayers').value;
+    const password = document.getElementById('pvpPassword').value.trim();
+    
+    // Prevent double click
+    const btn = event.target;
+    if(btn.disabled) return;
+    btn.disabled = true;
+    btn.textContent = '생성 중...';
+    
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'create', host_id:userInfo.id, host_name:userInfo.name, title:title, mode:mode, max_players:maxPlayers, password:password})
+        });
+        const text = await res.text();
+        console.log('Create response:', text);
+        let data;
+        try { data = JSON.parse(text); } catch(pe) { alert('서버 응답 오류: ' + text); return; }
+        if(data.success){
+            pvpRoomCode = data.room_code;
+            pvpIsHost = true;
+            pvpMode = true;
+            curMode = parseInt(mode);
+            document.getElementById('pvpLobbyModal').classList.add('hidden');
+            showWaitingRoom();
+        } else { alert(data.message || '방 생성 실패'); }
+    } catch(e){ alert('방 생성 실패: ' + e.message); console.error(e); }
+    
+    btn.disabled = false;
+    btn.textContent = '방 만들기';
+}
+
+// Quick start - join random public room
+window.quickStart = async function(){
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'list'})
+        });
+        const data = await res.json();
+        if(data.success && data.rooms.length > 0){
+            // Filter public rooms (no password) that are not full
+            const publicRooms = data.rooms.filter(r => !r.has_password && r.current_players < r.max_players);
+            if(publicRooms.length > 0){
+                const room = publicRooms[Math.floor(Math.random() * publicRooms.length)];
+                joinRoom(room.code, false);
+            } else {
+                alert('입장 가능한 공개방이 없습니다');
+            }
+        } else {
+            alert('대기 중인 방이 없습니다');
+        }
+    } catch(e){ alert('빠른시작 실패'); }
+}
+
+window.joinPrivateRoom = function(){
+    const code = document.getElementById('pvpJoinCode').value.trim().toUpperCase();
+    if(!code) return alert('방 코드를 입력해주세요');
+    joinRoom(code);
+}
+
+window.joinRoom = async function(code, hasPassword=false){
+    let password = '';
+    if(hasPassword){
+        password = prompt('비밀번호를 입력해주세요:');
+        if(password === null) return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'join', room_code:code, player_id:userInfo.id, player_name:userInfo.name, password:password})
+        });
+        const data = await res.json();
+        if(data.success){
+            pvpRoomCode = code;
+            pvpIsHost = false;
+            pvpMode = true;
+            curMode = parseInt(data.mode);
+            document.getElementById('pvpLobbyModal').classList.add('hidden');
+            showWaitingRoom();
+        } else { alert(data.message); }
+    } catch(e){ alert('입장 실패'); }
+}
+
+function showWaitingRoom(){
+    document.getElementById('pvpWaitingModal').classList.remove('hidden');
+    document.getElementById('pvpPlayerList').innerHTML = '';
+    document.getElementById('pvpCountdown').style.display = 'none';
+    document.getElementById('pvpWaitingText').textContent = '플레이어를 기다리는 중...';
+    document.getElementById('pvpStartBtn').style.display = pvpIsHost ? 'block' : 'none';
+    
+    // Ready button: host is auto-ready, hide for host
+    const readyBtn = document.getElementById('pvpReadyBtn');
+    if(pvpIsHost){
+        readyBtn.style.display = 'none';
+        myReady = true;
+    } else {
+        readyBtn.style.display = 'block';
+        readyBtn.textContent = '✋ 준비';
+        readyBtn.classList.remove('primary');
+        readyBtn.classList.add('secondary');
+        myReady = false;
+    }
+    
+    startPvpPolling();
+}
+
+function startPvpPolling(){
+    if(pvpPollInterval) clearInterval(pvpPollInterval);
+    const poll = async()=>{
+        try {
+            const res = await fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'status', room_code:pvpRoomCode, player_id:userInfo.id})
+            });
+            const data = await res.json();
+            if(!data.success) return;
+            
+            // Update Host Status
+            if(data.room && data.room.host_id === userInfo.id) {
+                if(!pvpIsHost) {
+                    pvpIsHost = true;
+                    // Ensure start button visibility for new host
+                    const startBtn = document.getElementById('pvpStartBtn');
+                    if(startBtn) startBtn.style.display = 'block';
+                }
+            }
+            
+            // Update player list
+            const listHtml = data.players.map((p, i) => 
+                `<div style="padding:8px; background:${p.ready ? '#ecfdf5' : '#f8fafc'}; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between; border:1px solid ${p.ready ? '#10b981' : '#e2e8f0'};">
+                    <span>${i===0 ? '👑 ' : ''}${p.name}</span>
+                    <span style="font-size:12px;">${i===0 ? '' : (p.ready ? '✅ 준비완료' : '⏳ 대기중')}</span>
+                </div>`
+            ).join('');
+            document.getElementById('pvpPlayerList').innerHTML = listHtml;
+            
+            // Sync myReady status for guest
+            if(!pvpIsHost){
+                const me = data.players.find(p => p.id === userInfo.id);
+                if(me){
+                    if(me.ready !== myReady){
+                        myReady = me.ready;
+                        const btn = document.getElementById('pvpReadyBtn');
+                        if(btn){
+                            if(myReady){
+                                 btn.textContent = '✅ 준비완료';
+                                 btn.classList.remove('secondary');
+                                 btn.classList.add('primary');
+                            } else {
+                                 btn.textContent = '✋ 준비';
+                                 btn.classList.remove('primary');
+                                 btn.classList.add('secondary');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            const allReady = data.players.every(p => p.ready);
+            document.getElementById('pvpWaitingText').textContent = allReady && data.players.length >= 2 
+                ? '모두 준비 완료!' 
+                : `${data.players.length}/${data.max_players}명 참가 중`;
+            
+            // Check if host & can start (all players ready)
+            if(pvpIsHost && data.players.length >= 2 && data.status === 'waiting'){
+                document.getElementById('pvpStartBtn').style.display = 'block';
+                document.getElementById('pvpStartBtn').disabled = !allReady;
+            }
+            
+            // Update chat log
+            if(data.chat){
+                const chatLog = document.getElementById('pvpChatLog');
+                if(chatLog){
+                    chatLog.innerHTML = data.chat.map(c => 
+                        `<div><b>${c.name}:</b> ${c.msg}</div>`
+                    ).join('');
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                }
+            }
+            
+            // Game started by host
+            if(data.status === 'playing' && data.seed){
+                pvpSeed = data.seed;
+                pvpWords = data.words ? JSON.parse(data.words) : null; // Store words from server
+                startPvpCountdown(data.start_time);
+                clearInterval(pvpPollInterval);
+            }
+            
+            // if we are waiting for host to reset, ignore finished status
+            if(data.status === 'waiting'){
+                window.ignoreFinishStatus = false;
+            }
+            
+            // Game finished - show results
+            if(data.status === 'finished' && !window.ignoreFinishStatus){
+                clearInterval(pvpPollInterval);
+                showMultiplayerResult(data.players);
+            }
+        } catch(e){}
+    };
+    poll();
+    pvpPollInterval = setInterval(poll, 1500);
+}
+
+function startPvpCountdown(startTime){
+    document.getElementById('pvpWaitingText').textContent = '곧 시작합니다!';
+    document.getElementById('pvpCountdown').style.display = 'block';
+    const tick = ()=>{
+        const now = Math.floor(Date.now()/1000);
+        const remaining = startTime - now;
+        if(remaining <= 0){
+            document.getElementById('pvpWaitingModal').classList.add('hidden');
+            actualStartPvpGame();
+        } else {
+            document.getElementById('pvpCountdown').textContent = remaining;
+            setTimeout(tick, 500);
+        }
+    };
+    tick();
+}
+
+function seededRandom(seed){
+    return function(){
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+    };
+}
+
+// Host requests game start (button click) - generates and sends word list
+window.requestPvpStart = async function(){
+    if(!pvpIsHost) return;
+    try {
+        // Host generates word list
+        N = curMode;
+        const pool = [...koPool];
+        shuffle(pool);
+        const picked = pool.slice(0, N);
+        const wordsJson = JSON.stringify(picked);
+        
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'start', room_code:pvpRoomCode, host_id:userInfo.id, words:wordsJson})
+        });
+        const data = await res.json();
+        if(!data.success) alert(data.message);
+    } catch(e){ alert('시작 실패'); }
+}
+
+window.sendChat = async function(){
+    const input = document.getElementById('pvpChatInput');
+    const msg = input.value.trim();
+    if(!msg || !pvpRoomCode) return;
+    input.value = '';
+    try {
+        await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'chat', room_code:pvpRoomCode, name:userInfo.name, message:msg})
+        });
+    } catch(e){}
+}
+
+let myReady = false;
+window.toggleReady = async function(){
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'ready', room_code:pvpRoomCode, player_id:userInfo.id})
+        });
+        const data = await res.json();
+        if(data.success){
+            myReady = !myReady;
+            const btn = document.getElementById('pvpReadyBtn');
+            if(myReady){
+                btn.textContent = '✅ 준비완료';
+                btn.classList.remove('secondary');
+                btn.classList.add('primary');
+            } else {
+                btn.textContent = '✋ 준비';
+                btn.classList.remove('primary');
+                btn.classList.add('secondary');
+            }
+        }
+    } catch(e){}
+}
+
+function actualStartPvpGame(){
+    // Use words from server (host-generated)
+    if(!pvpWords || pvpWords.length === 0){
+        alert('단어 목록을 받지 못했습니다');
+        return;
+    }
+    
+    N = pvpWords.length;
+    const picked = pvpWords;
+    console.log('[PVP] Using server words:', picked);
+    
+    // Sort for ranking
+    const sorted = [...picked].sort((a,b) => koCollator.compare(a,b));
+    const rankMap = new Map(sorted.map((w,i)=>[w, i+1]));
+    wordMap = picked.map(w => w);
+    let out = picked.map((w, i) => ({ wid: i+1, key: rankMap.get(w), label: w }));
+    
+    // Shuffle display order using seed
+    const rng = seededRandom(pvpSeed);
+    for(let i=out.length-1; i>0; i--){
+        const j = Math.floor(rng() * (i+1));
+        [out[i], out[j]] = [out[j], out[i]];
+    }
+    items = out;
+    
+    memoBox.style.display="none"; listWrap.style.display="block";
+    // PVP 모드에서는 리셋 버튼 숨김 (기권 방지)
+    resetBtn.disabled=false; resetBtn.style.display= pvpMode ? "none" : "block";
+    sizeSel.disabled=true; startBtn.disabled=true;
+    
+    started=true; finished=false; startTime=performance.now();
+    document.querySelectorAll(".timer-display").forEach(el=>el.textContent="0.00");
+    clearInterval(timerId); timerId=setInterval(updateTimer,50);
+    
+    renderList();
+    const keys=currentKeys();
+    initialInv=Math.max(1,inversionCount(keys));
+    prevInversionCount=initialInv;
+    updateGauge(keys);
+    
+    setStatus("진행 중");
+    actionLog=[];
+    errorCount=0;
+    
+    rankingBtnArea.classList.remove("active");
+    gameStatusPanel.classList.add("active");
+    if(cardEl) cardEl.classList.add("game-active");
+    
+    initSortable();
+    if(!pvpMode) updateHud(true); // PVP에서는 플로팅 HUD 숨김
+    
+    // PVP 모드: 진행도 폴링 시작
+    if(pvpMode){
+        startPvpGamePolling();
+    }
+}
+
+let pvpGamePollInterval = null;
+
+function startPvpGamePolling(){
+    if(pvpGamePollInterval) clearInterval(pvpGamePollInterval);
+    
+    // Clean up existing UI elements
+    const oldPanel = document.getElementById('pvpOpponentProgress');
+    if(oldPanel) oldPanel.remove();
+    const oldBtn = document.getElementById('pvpForfeitBtn');
+    if(oldBtn) oldBtn.remove();
+    
+    const progressPanel = document.createElement('div');
+    progressPanel.id = 'pvpOpponentProgress';
+    progressPanel.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background:white; padding:12px 16px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:9999; min-width:200px; font-size:13px;';
+    progressPanel.innerHTML = `<div style="font-weight:700; margin-bottom:8px; text-align:center;">⚔️ 진행도</div><div id="pvpOpponentList"></div>`;
+    document.body.appendChild(progressPanel);
+    
+    // Forfeit button at same position as reset button (bottom-right)
+    const forfeitBtn = document.createElement('button');
+    forfeitBtn.id = 'pvpForfeitBtn';
+    forfeitBtn.className = 'floating-reset-btn';
+    forfeitBtn.onclick = forfeitGame;
+    forfeitBtn.style.cssText = 'position:fixed; bottom:30px; right:30px; z-index:10000; box-shadow:0 8px 20px rgba(0,0,0,0.2); font-size:15px; padding:12px 24px; background:#ef4444; color:white; border:none; border-radius:30px; cursor:pointer;';
+    forfeitBtn.innerHTML = '🏳️ 기권';
+    document.body.appendChild(forfeitBtn);
+    
+    pvpGamePollInterval = setInterval(async()=>{
+        try {
+            // Send my progress (clamped 0-100)
+            const myProgress = Math.max(0, Math.min(100, Math.round((1 - (inversionCount(currentKeys()) / Math.max(1, initialInv))) * 100)));
+            
+            // Optimization: Only send if changed
+            if(window.lastSentProgress === undefined || window.lastSentProgress !== myProgress){
+                await fetch(`${API_BASE}/pvp.php`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({action:'update_progress', room_code:pvpRoomCode, player_id:userInfo.id, progress:myProgress})
+                });
+                window.lastSentProgress = myProgress;
+            }
+            
+            // Get all players progress
+            const res = await fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'status', room_code:pvpRoomCode})
+            });
+            const data = await res.json();
+            if(data.success){
+                const me = data.players.find(p => p.id === userInfo.id);
+                const others = data.players.filter(p => p.id !== userInfo.id);
+                
+                const listEl = document.getElementById('pvpOpponentList');
+                if(listEl){
+                    // Self first
+                    let html = `
+                        <div style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="font-weight:600;">🙋 ${me?.name || userInfo.name}</span>
+                                <span>${me?.finish_time ? '✅완료' : (me?.progress||0)+'%'}</span>
+                            </div>
+                            <div style="background:#e2e8f0; height:8px; border-radius:4px; overflow:hidden;">
+                                <div style="background:#3b82f6; height:100%; width:${me?.finish_time ? 100 : (me?.progress||0)}%; transition:width 0.3s;"></div>
+                            </div>
+                        </div>`;
+                    
+                    // Others
+                    html += others.map(p => `
+                        <div style="margin-bottom:6px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span>${p.name}</span>
+                                <span>${p.finish_time ? '✅완료' : (p.progress||0)+'%'}</span>
+                            </div>
+                            <div style="background:#e2e8f0; height:6px; border-radius:3px; overflow:hidden;">
+                                <div style="background:${p.finish_time ? '#22c55e' : 'var(--primary)'}; height:100%; width:${p.finish_time ? 100 : (p.progress||0)}%; transition:width 0.3s;"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    listEl.innerHTML = html;
+                }
+                
+                // Check if game finished - show result to ALL players immediately
+                if(data.status === 'finished'){
+                    clearInterval(pvpGamePollInterval);
+                    clearInterval(timerId);
+                    finished = true;
+                    const panel = document.getElementById('pvpOpponentProgress');
+                    if(panel) panel.remove();
+                    const forfeitBtn = document.getElementById('pvpForfeitBtn');
+                    if(forfeitBtn) forfeitBtn.remove();
+                    showMultiplayerResult(data.players);
+                }
+            }
+        } catch(e){}
+    }, 1000);
+}
+
+function showMultiplayerResult(players){
+    
+    // Keep alive while viewing result
+    startHeartbeat();
+    
+    // Clean up game UI first
+    if(pvpGamePollInterval) clearInterval(pvpGamePollInterval);
+    const panel = document.getElementById('pvpOpponentProgress');
+    if(panel) panel.remove();
+    const forfeitBtn = document.getElementById('pvpForfeitBtn');
+    if(forfeitBtn) forfeitBtn.remove();
+    
+    // Hide default close button for PVP (we use custom '확인' button)
+    const finishCloseBtn = document.getElementById('finishCloseBtn');
+    if(finishCloseBtn) finishCloseBtn.style.display = 'none';
+    
+    // Ranking logic:
+    // - Lower finish_time = better (faster completion)
+    // - null = still playing - treat as Infinity (worst)
+    // - 9999 = forfeit - also treat as Infinity (worst)
+    // So: completed (1-9998 seconds) < forfeit/still playing (Infinity)
+    const sorted = [...players].sort((a,b) => {
+        let tA = (a.finish_time === null || a.finish_time >= 9999) ? Infinity : a.finish_time;
+        let tB = (b.finish_time === null || b.finish_time >= 9999) ? Infinity : b.finish_time;
+        return tA - tB;
+    });
+    
+    // Find my data
+    const myData = sorted.find(p => p.id === userInfo.id);
+    const myIndex = sorted.findIndex(p => p.id === userInfo.id);
+    const myRank = myIndex === -1 ? '-' : (myIndex + 1);
+    
+    // Winner logic for 1v1:
+    const myFinishTime = myData?.finish_time;
+    const iForfeited = myFinishTime !== null && myFinishTime >= 9999;
+    const iFinished = myFinishTime !== null && myFinishTime < 9999;
+    const iPlaying = myFinishTime === null;
+    
+    // Check opponent (for 1v1)
+    const opponent = sorted.find(p => p.id !== userInfo.id);
+    const opponentForfeited = opponent?.finish_time !== null && opponent?.finish_time >= 9999;
+    const opponentFinished = opponent?.finish_time !== null && opponent?.finish_time < 9999;
+    const opponentPlaying = opponent?.finish_time === null;
+    
+    
+    // Determine winner
+    let isWinner = false;
+    let resultText = '';
+    
+    if(sorted.length === 2) { // 1v1
+        // Simple logic: rank 1 = winner, rank 2 = loser
+        // If I forfeited (9999), I definitely lose
+        // If opponent forfeited, I definitely win
+        if(iForfeited && opponentForfeited) {
+            resultText = `<span style="color:#f59e0b; font-size:36px; font-weight:800;">🤝 무승부</span>`;
+        } else if(iForfeited) {
+            resultText = `<span style="color:#ef4444; font-size:36px; font-weight:800;">😢 패배!</span>`;
+        } else if(opponentForfeited) {
+            isWinner = true;
+            resultText = `<span style="color:#22c55e; font-size:36px; font-weight:800;">🏆 승리!</span>`;
+        } else {
+            // Use ranking: whoever has lower finish_time wins
+            // If both null, use index (first in sorted = winner)
+            isWinner = myRank === 1;
+            resultText = isWinner 
+                ? `<span style="color:#22c55e; font-size:36px; font-weight:800;">🏆 승리!</span>`
+                : `<span style="color:#ef4444; font-size:36px; font-weight:800;">😢 패배!</span>`;
+        }
+    } else {
+        // Multiplayer - show rank
+        if(iForfeited) {
+            resultText = `<span style="color:#ef4444; font-size:36px; font-weight:800;">🏳️ 기권</span>`;
+        } else {
+            isWinner = myRank === 1;
+            const rankDisplay = (myRank === '-' || myRank === 0) ? '?' : myRank;
+            resultText = isWinner 
+                ? `<span style="color:#22c55e; font-size:36px; font-weight:800;">🏆 승리!</span>`
+                : `<span style="color:#ef4444; font-size:36px; font-weight:800;">😢 ${rankDisplay}등</span>`;
+        }
+    }
+    
+    // Display Time for MY record
+    let myTimeDisplay = '-';
+    if(iForfeited) {
+        myTimeDisplay = '기권패';
+    } else if(iFinished) {
+        myTimeDisplay = myFinishTime + '초';
+    } else if(isWinner) {
+        myTimeDisplay = '기권승';
+    }
+    
+    let rankHtml = sorted.map((p, i) => {
+        // Determine opponent status for display
+        const pForfeited = p.finish_time !== null && p.finish_time >= 9999;
+        const pFinished = p.finish_time !== null && p.finish_time < 9999;
+        const pPlaying = p.finish_time === null;
+        
+        let timeDisplay = '';
+        if(pForfeited) {
+            timeDisplay = '🏳️기권';
+        } else if(pFinished) {
+            timeDisplay = p.finish_time + '초';
+        } else if(pPlaying) {
+            // Game has ended but this player didn't finish
+            // In 1v1: if opponent forfeited, show 승리
+            // In multiplayer: show 실패
+            if(sorted.length === 2) {
+                const otherPlayer = sorted.find(op => op.id !== p.id);
+                if(otherPlayer && otherPlayer.finish_time >= 9999) {
+                    timeDisplay = '🏆승리';
+                } else {
+                    timeDisplay = '❌실패';
+                }
+            } else {
+                // Multiplayer - player didn't finish, game ended
+                timeDisplay = '❌실패';
+            }
+        }
+        
+        let rankText = (i+1)+'등';
+        if(i===0) rankText = '🥇';
+        if(i===1) rankText = '🥈';
+        if(i===2) rankText = '🥉';
+        
+        return `<div style="display:flex; justify-content:space-between; padding:8px; ${p.id === userInfo.id ? 'background:#f0f9ff; border-radius:6px;' : ''}">
+            <span>${rankText} ${p.name}</span>
+            <span style="font-weight:600;">${timeDisplay}</span>
+        </div>`;
+    }).join('');
+    
+    document.getElementById('finishModal').classList.remove('hidden');
+    document.getElementById('finishMessage').innerHTML = `${resultText}<div id="pvpRankList" style="margin-top:16px; text-align:left; font-size:14px;">${rankHtml}</div>`;
+    
+    // Show close button as Return to PVP
+    if(finishCloseBtn) {
+        finishCloseBtn.style.display = 'block';
+        finishCloseBtn.textContent = '돌아가기';
+        finishCloseBtn.onclick = returnToPvpRoom;
+    }
+    document.getElementById('finishTimeVal').textContent = myTimeDisplay;
+    
+    // Set difficulty for PVP
+    const modeLabelsResult = {'10':'하남자','20':'중남자','40':'상남자','80':'씹상남자'};
+    document.getElementById('finishDifficultyVal').textContent = modeLabelsResult[String(N)] || N + '개';
+    
+    // Start result polling to update other players' records
+    if(pvpResultPollInterval) clearInterval(pvpResultPollInterval);
+    pvpResultPollInterval = setInterval(async () => {
+        if(!pvpRoomCode) { clearInterval(pvpResultPollInterval); return; }
+        try {
+            const res = await fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'status', room_code:pvpRoomCode, player_id:userInfo.id})
+            });
+            const data = await res.json();
+            if(data.success && data.players) {
+                updateResultRanking(data.players);
+            }
+        } catch(e) {}
+    }, 2000);
+    
+    // Record PVP result to server
+    if(typeof isWinner !== 'undefined') {
+        const result = isWinner ? 'win' : 'loss';
+        fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'record_result', player_id:userInfo.id, result:result})
+        }).then(() => {
+            // Update local stats
+            if(!userInfo.pvp_stats) userInfo.pvp_stats = {wins:0, losses:0};
+            if(isWinner) userInfo.pvp_stats.wins++;
+            else userInfo.pvp_stats.losses++;
+            localStorage.setItem('questree_user', JSON.stringify(userInfo));
+        }).catch(e => console.error('Failed to record result:', e));
+    }
+}
+
+let pvpResultPollInterval = null;
+
+function updateResultRanking(players) {
+    const rankListEl = document.getElementById('pvpRankList');
+    if(!rankListEl) return;
+    
+    const sorted = [...players].sort((a,b) => {
+        let tA = (a.finish_time === null || a.finish_time >= 9999) ? Infinity : a.finish_time;
+        let tB = (b.finish_time === null || b.finish_time >= 9999) ? Infinity : b.finish_time;
+        return tA - tB;
+    });
+    
+    let rankHtml = sorted.map((p, i) => {
+        const pForfeited = p.finish_time !== null && p.finish_time >= 9999;
+        const pFinished = p.finish_time !== null && p.finish_time < 9999;
+        const pPlaying = p.finish_time === null;
+        
+        let timeDisplay = '';
+        if(pForfeited) {
+            timeDisplay = '🏳️기권';
+        } else if(pFinished) {
+            timeDisplay = p.finish_time + '초';
+        } else if(pPlaying) {
+            timeDisplay = '⏳진행중';
+        }
+        
+        let rankText = (i+1)+'등';
+        if(i===0) rankText = '🥇';
+        if(i===1) rankText = '🥈';
+        if(i===2) rankText = '🥉';
+        
+        return `<div style="display:flex; justify-content:space-between; padding:8px; ${p.id === userInfo.id ? 'background:#f0f9ff; border-radius:6px;' : ''}">
+            <span>${rankText} ${p.name}</span>
+            <span style="font-weight:600;">${timeDisplay}</span>
+        </div>`;
+    }).join('');
+    
+    rankListEl.innerHTML = rankHtml;
+}
+
+window.returnToPvpRoom = async function(){
+    if(pvpResultPollInterval) clearInterval(pvpResultPollInterval);
+    document.getElementById('finishModal').classList.add('hidden');
+    stopHeartbeat();
+    
+    // Set flag to ignore 'finished' status from server until it becomes 'waiting'
+    window.ignoreFinishStatus = true;
+    
+    // Reset local game state (UI)
+    resetAll();
+    
+    // Restore PVP specific UI
+    const gameStatusPanel = document.getElementById('gameStatusPanel');
+    const rankingBtnArea = document.getElementById('rankingBtnArea');
+    if(gameStatusPanel) gameStatusPanel.classList.remove("active");
+    if(rankingBtnArea) rankingBtnArea.classList.add("active"); 
+    // Ensure card reset
+    const card = document.getElementById('card');
+    if(card) {
+        card.classList.remove("game-active");
+        card.style.transform = ''; // Clear inline styles
+    }
+    // Clear body classes just in case
+    document.body.classList.remove('game-mode'); // If such class exists
+    
+    // If host, send reset signal to server
+    if(pvpIsHost){
+        try {
+            await fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'reset', room_code:pvpRoomCode, host_id:userInfo.id})
+            });
+        } catch(e){}
+    } else {
+        // If guest, force unready
+        try {
+            await fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'ready', room_code:pvpRoomCode, player_id:userInfo.id, force:'false'})
+            });
+        } catch(e){}
+    }
+    
+    // Reset ready state
+    myReady = false;
+    
+    // Show WAITING ROOM again
+    showWaitingRoom();
+}
+
+function showWaitingRoom(){
+    const lobbyModal = document.getElementById('pvpLobbyModal');
+    const waitingModal = document.getElementById('pvpWaitingModal');
+    const roomCodeDisplay = document.getElementById('pvpRoomCodeDisplay');
+    const waitingText = document.getElementById('pvpWaitingText');
+    const startBtn = document.getElementById('pvpStartBtn');
+    const readyBtn = document.getElementById('pvpReadyBtn');
+    const countdownDisplay = document.getElementById('pvpCountdown');
+    
+    // Hide lobby, show waiting room
+    if(lobbyModal) lobbyModal.classList.add('hidden');
+    if(waitingModal) waitingModal.classList.remove('hidden');
+    if(roomCodeDisplay) roomCodeDisplay.textContent = pvpRoomCode || '';
+    if(countdownDisplay) countdownDisplay.style.display = 'none';
+    
+    if(pvpIsHost){
+        if(startBtn) { startBtn.style.display = 'block'; startBtn.disabled = true; }
+        if(readyBtn) readyBtn.style.display = 'none';
+        if(waitingText) waitingText.textContent = '플레이어 대기 중...';
+    } else {
+        if(startBtn) startBtn.style.display = 'none';
+        if(readyBtn) {
+            readyBtn.style.display = 'block';
+            readyBtn.textContent = '✋ 준비';
+            readyBtn.classList.remove('primary');
+            readyBtn.classList.add('secondary');
+        }
+        if(waitingText) waitingText.textContent = '호스트 대기 중...';
+    }
+    
+    // Clear and restart polling with delay to let server sync
+    if(pvpPollInterval) clearInterval(pvpPollInterval);
+    pvpPollInterval = null;
+    setTimeout(() => startPvpPolling(), 500);
+}
+
+// 기권 처리
+window.forfeitGame = async function(){
+    if(!confirm('정말 기권하시겠습니까?')) return;
+    
+    // Stop game
+    finished = true;
+    clearInterval(timerId);
+    if(pvpGamePollInterval) clearInterval(pvpGamePollInterval);
+    const panel = document.getElementById('pvpOpponentProgress');
+    if(panel) panel.remove();
+    const forfeitBtn = document.getElementById('pvpForfeitBtn');
+    if(forfeitBtn) forfeitBtn.remove();
+    
+    // Send forfeit as 9999 seconds
+    console.log('[FORFEIT] Sending forfeit for', userInfo.id, 'to room', pvpRoomCode);
+    try {
+        const resp = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'finish', room_code:pvpRoomCode, player_id:userInfo.id, time:9999})
+        });
+        const result = await resp.json();
+        console.log('[FORFEIT] Server response:', result);
+    } catch(e){ console.error('[FORFEIT] Error:', e); }
+    
+    // Reset and show result
+    pollPvpResult(true); // Immediate check
+}
+
+// Heartbeat vars
+let pvpHeartbeatInterval = null;
+
+function startHeartbeat(){
+    if(pvpHeartbeatInterval) clearInterval(pvpHeartbeatInterval);
+    pvpHeartbeatInterval = setInterval(()=>{
+        if(pvpRoomCode && userInfo.id){
+            fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'status', room_code:pvpRoomCode, player_id:userInfo.id})
+            }).catch(()=>{});
+        }
+    }, 3000);
+}
+
+function stopHeartbeat(){
+    if(pvpHeartbeatInterval) clearInterval(pvpHeartbeatInterval);
+    pvpHeartbeatInterval = null;
+}
+
+window.leavePvpRoom = async function(){
+    if(pvpPollInterval) clearInterval(pvpPollInterval);
+    stopHeartbeat();
+    try {
+        await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'leave', room_code:pvpRoomCode, player_id:userInfo.id})
+        });
+    } catch(e){}
+    pvpRoomCode = null;
+    pvpMode = false;
+    document.getElementById('pvpWaitingModal').classList.add('hidden');
+    openPvpLobby();
+}
+
+// PVP 완료 전송 및 결과 폴링
+async function sendPvpFinish(time){
+    // Start heartbeat to prevent kick while waiting for others
+    startHeartbeat();
+    
+    // Hide forfeit button, show spectating
+    const panel = document.getElementById('pvpOpponentProgress');
+    if(panel){
+        const title = panel.querySelector('div');
+        if(title) title.innerHTML = '👀 관전 중';
+        const forfeitBtn = document.getElementById('pvpForfeitBtn');
+        if(forfeitBtn) forfeitBtn.style.display = 'none';
+    }
+    
+    try {
+        await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'finish', room_code:pvpRoomCode, player_id:userInfo.id, time:time})
+        });
+    } catch(e){}
+    pollPvpResult();
+}
+
+function pollPvpResult(forceShow = false){
+    const poll = async()=>{
+        try {
+            const res = await fetch(`${API_BASE}/pvp.php`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action:'status', room_code:pvpRoomCode, player_id:userInfo.id}) 
+            });
+            const data = await res.json();
+            
+            // Check if *I* have finished status in the server
+            const me = data.players?.find(p => p.id === userInfo.id);
+            const myFinishCtx = me?.finish_time !== null;
+            
+            if(data.success && (data.status === 'finished' || myFinishCtx || forceShow)){
+                if(window.pvpResultPollId) clearInterval(window.pvpResultPollId);
+                showMultiplayerResult(data.players);
+            } else if(!data.success && forceShow) {
+                // If forced show but server says no success, likely room closed or error
+                alert("결과 조회 실패: " + (data.message || "알 수 없는 오류"));
+            }
+        } catch(e){
+            // console.error(e);
+            if(forceShow) alert("서버 통신 오류: " + e);
+        }
+    };
+    
+    // Execute with slight delay to allow server file save
+    setTimeout(() => {
+        poll();
+        // Then interval
+        if(window.pvpResultPollId) clearInterval(window.pvpResultPollId);
+        window.pvpResultPollId = setInterval(poll, 1000);
+    }, 300);
+}
+
+function showPvpResult(data){
+    const isWinner = (pvpIsHost && data.winner === 'host') || (!pvpIsHost && data.winner === 'guest');
+    const myTime = pvpIsHost ? data.host_finish : data.guest_finish;
+    const opponentTime = pvpIsHost ? data.guest_finish : data.host_finish;
+    const opponentName = pvpIsHost ? data.guest_name : data.host_name;
+    
+    document.getElementById('finishModal').classList.remove('hidden');
+    document.getElementById('finishMessage').innerHTML = isWinner 
+        ? `<span style="color:#22c55e; font-size:28px;">🏆 승리!</span><br><span style="font-size:16px;">vs ${opponentName}</span>`
+        : `<span style="color:#ef4444; font-size:28px;">😢 패배</span><br><span style="font-size:16px;">vs ${opponentName}</span>`;
+    document.getElementById('finishTimeVal').textContent = `${myTime}초 vs ${opponentTime}초`;
+    
+    pvpRoomCode = null;
+    pvpMode = false;
+}
+
+// 페이지 닫힐 때 방 자동 나가기
+window.addEventListener('beforeunload', function() {
+    if(typeof pvpRoomCode !== 'undefined' && pvpRoomCode && userInfo.id) {
+        const data = new URLSearchParams({action:'leave', room_code:pvpRoomCode, player_id:userInfo.id});
+        navigator.sendBeacon(`${API_BASE}/pvp.php`, data);
+    }
+});
+
+// 랭킹 탭 전환
+let currentRankTab = 'solo';
+window.switchRankTab = async function(tab) {
+    currentRankTab = tab;
+    const soloBtn = document.getElementById('rankTabSolo');
+    const pvpBtn = document.getElementById('rankTabPvp');
+    const subtitle = document.getElementById('rankingModalSubtitle');
+    const rankList = document.getElementById('rankList');
+    
+    if(tab === 'solo') {
+        soloBtn.style.background = '#0ea5e9';
+        soloBtn.style.color = 'white';
+        pvpBtn.style.background = '#e2e8f0';
+        pvpBtn.style.color = '#64748b';
+        // Use existing openRankingModal logic
+        const modeKey = sizeSel.options[sizeSel.selectedIndex].text;
+        const key = sizeSel.value;
+        const modeNames = {'10':'하남자','20':'중남자','40':'상남자','80':'씹상남자'};
+        subtitle.textContent = modeNames[key] || modeKey;
+        
+        const ranks = await getRanks(key);
+        if(ranks.length === 0){
+            rankList.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">아직 기록이 없습니다.</div>';
+        } else {
+            let html = '';
+            ranks.slice(0, 10).forEach((r, idx) => {
+                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx+1}`;
+                html += `
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px; background:${idx<3?'#fef9c3':'#f8fafc'}; border-radius:8px; margin-bottom:6px;">
+                        <span style="font-size:18px; width:28px; text-align:center;">${medal}</span>
+                        <span style="flex:1; font-weight:600;">${escapeHtml(r.name)}</span>
+                        <span style="font-size:14px; font-weight:700; color:#0ea5e9;">${Number(r.time).toFixed(2)}초</span>
+                    </div>
+                `;
+            });
+            rankList.innerHTML = html;
+        }
+    } else {
+        pvpBtn.style.background = '#0ea5e9';
+        pvpBtn.style.color = 'white';
+        soloBtn.style.background = '#e2e8f0';
+        soloBtn.style.color = '#64748b';
+        subtitle.textContent = 'PVP 승수 기준';
+        await loadPvpRanking();
+    }
+};
+
+async function loadPvpRanking() {
+    const rankList = document.getElementById('rankList');
+    rankList.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">로딩 중...</div>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/pvp.php`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'pvp_ranking'})
+        });
+        const data = await res.json();
+        
+        if(data.success && data.ranking && data.ranking.length > 0) {
+            let html = '';
+            data.ranking.forEach((p, i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
+                const total = p.wins + p.losses;
+                const rate = total > 0 ? Math.round((p.wins / total) * 100) : 0;
+                html += `
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px; background:${i<3?'#fef9c3':'#f8fafc'}; border-radius:8px; margin-bottom:8px;">
+                        <span style="font-size:20px; width:30px; text-align:center;">${medal}</span>
+                        <span style="flex:1; font-weight:600;">${p.name}</span>
+                        <span style="font-size:13px; color:#22c55e; font-weight:700;">${p.wins}승</span>
+                        <span style="font-size:13px; color:#ef4444;">${p.losses}패</span>
+                        <span style="font-size:12px; color:#64748b;">(${rate}%)</span>
+                    </div>
+                `;
+            });
+            rankList.innerHTML = html;
+        } else {
+            rankList.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">아직 PVP 기록이 없습니다.</div>';
+        }
+    } catch(e) {
+        rankList.innerHTML = '<div style="text-align:center; padding:20px; color:#ef4444;">랭킹 로드 실패</div>';
+    }
 }
 
 // 초기 실행 시
