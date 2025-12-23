@@ -1146,6 +1146,7 @@ let sortableInst = null;
 let dragging = false;
 let lastClientY = null;
 let scrollLoopId = null;
+let gameToken = null; // Anti-cheat token
 
 // 로깅용 상태
 let orderBeforeMove = "";
@@ -1335,15 +1336,21 @@ async function getRanks(modeKey){
 
 async function saveRanking(modeKey, name, timeVal){
   try {
-    await fetch(`${API_BASE}/rankings.php`, {
+    const res = await fetch(`${API_BASE}/rankings.php`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         mode: modeKey,
         name: name,
-        time: timeVal
+        time: timeVal,
+        token: gameToken || ''
       })
     });
+    const data = await res.json();
+    if (data.error) {
+      console.error("Ranking save rejected:", data.error);
+      showToast("랭킹 저장 실패: " + data.error);
+    }
   } catch(e) {
     console.error("Failed to save rank:", e);
     showToast("랭킹 저장 실패 (서버 연결 확인)");
@@ -1589,6 +1596,21 @@ async function startRun(){
   if(!isDataReady){ showToast("데이터 로딩 중입니다."); return; }
   N = Number(sizeSel.value);
   setStatus("준비 중");
+  
+  // Request game token for anti-cheat
+  try {
+    const tokenRes = await fetch(`${API_BASE}/game_token.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ action: 'start', user_id: userInfo.id, mode: sizeSel.value })
+    });
+    const tokenData = await tokenRes.json();
+    if (tokenData.success) {
+      gameToken = tokenData.token;
+    } else {
+      showToast("게임 시작 실패"); return;
+    }
+  } catch(e) { showToast("서버 연결 실패"); return; }
   try{
     const pool = koPool;
     const picked = sampleUnique(pool, N);

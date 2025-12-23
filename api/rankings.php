@@ -25,10 +25,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Switch to $_POST
     $mode = $_POST['mode'] ?? '';
     $name = $_POST['name'] ?? '';
-    $time = $_POST['time'] ?? 0;
+    $time = floatval($_POST['time'] ?? 0);
+    $token = $_POST['token'] ?? '';
 
     if (!$mode || !$name) {
         echo json_encode(['error' => 'Missing fields']);
+        exit;
+    }
+
+    // Validate token
+    if (!$token) {
+        echo json_encode(['error' => 'No token - cheating detected']);
+        exit;
+    }
+
+    // Call token validation
+    $ch = curl_init();
+    $tokenUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . dirname($_SERVER['REQUEST_URI']) . "/game_token.php";
+    curl_setopt($ch, CURLOPT_URL, $tokenUrl);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+        'action' => 'validate',
+        'token' => $token,
+        'time' => $time
+    ]));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $tokenResult = json_decode($response, true);
+    if (!$tokenResult || !$tokenResult['success']) {
+        echo json_encode(['error' => 'Invalid token - ' . ($tokenResult['error'] ?? 'unknown')]);
         exit;
     }
 
