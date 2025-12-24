@@ -1697,6 +1697,10 @@ async function startRun(){
      if(contentArea) contentArea.scrollTop = 0;
      window.scrollTo(0,0);
   }, 50);
+  
+  // Enable anti-cheat after game is fully initialized
+  window.gameReady = false;
+  setTimeout(() => { window.gameReady = true; }, 1000);
 }
 
 function initSortable(){
@@ -1737,6 +1741,8 @@ function initSortable(){
       if(typeof pvpMode !== 'undefined' && pvpMode) return;
       // Skip during legitimate rendering
       if(window.isRendering) return;
+      // Skip until game is fully ready (1 second after start)
+      if(!window.gameReady) return;
       
       if(!dragging && started && !finished){
         // DOM changed while not dragging = cheating
