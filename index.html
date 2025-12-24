@@ -1081,7 +1081,6 @@ let userInfo = { id: "", name: "" };
 let sessionCheckInterval = null;
 function startSessionCheck(){
     if(sessionCheckInterval) clearInterval(sessionCheckInterval);
-    let failCount = 0;
     const checkSession = ()=>{
         if(!userInfo.id || !userInfo.session_token) return;
         fetch(`${API_BASE}/auth.php`, {
@@ -1090,17 +1089,12 @@ function startSessionCheck(){
             body: new URLSearchParams({action:'validate_session', id:userInfo.id, session_token:userInfo.session_token})
         }).then(r=>r.json()).then(data=>{
             if(!data.valid){
-                failCount++;
-                if(failCount >= 3) { // Only logout after 3 consecutive failures
-                    localStorage.removeItem('questree_user');
-                    userInfo = {id:'', name:''};
-                    alert('다른 기기에서 로그인되어 로그아웃되었습니다.');
-                    location.reload();
-                }
-            } else {
-                failCount = 0; // Reset on success
+                localStorage.removeItem('questree_user');
+                userInfo = {id:'', name:''};
+                alert('다른 기기에서 로그인되어 로그아웃되었습니다.');
+                location.reload();
             }
-        }).catch(()=>{ /* Network error - ignore */ });
+        }).catch(()=>{});
     };
     sessionCheckInterval = setInterval(checkSession, 3000);
     document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkSession(); });
