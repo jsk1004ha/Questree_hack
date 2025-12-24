@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Check minimum time based on mode
-        $minTimes = ['10' => 3, '20' => 10, '40' => 30, '80' => 60];
+        $minTimes = ['10' => 3, '20' => 10, '40' => 20, '80' => 60];
         $modeKey = $tokenData['mode'];
         if (isset($minTimes[$modeKey]) && $time < $minTimes[$modeKey]) {
             echo json_encode(['success' => false, 'error' => 'Time too fast']);
