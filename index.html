@@ -1731,6 +1731,9 @@ function initSortable(){
   // Anti-cheat: Detect unauthorized DOM manipulation (bookmarklet scripts)
   if(!window.listObserver){
     window.listObserver = new MutationObserver((mutations) => {
+      // Skip for PVP mode (DOM is manipulated by game logic)
+      if(typeof pvpMode !== 'undefined' && pvpMode) return;
+      
       if(!dragging && started && !finished){
         // DOM changed while not dragging = cheating
         for(let m of mutations){
